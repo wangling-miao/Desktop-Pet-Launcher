@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Desktop Pet Launcher 是一个开源高清桌宠启动器，兼容 Codex / hatch-pet 桌宠包，支持透明置顶、托盘、设置页、自定义宠物文件夹和 4x 高清素材。"
+    />
+    <title>Desktop Pet Launcher</title>
+    <link rel="icon" href="assets/desktop-pet-launcher-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main>
+      <section class="hero" aria-label="Desktop Pet Launcher">
+        <div class="hero-scene" aria-hidden="true">
+          <div class="scene-grid"></div>
+          <div class="desktop-preview">
+            <div class="preview-topbar">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div class="preview-body">
+              <div class="pet-window">
+                <img src="assets/desktop-pet-launcher-icon.png" alt="" />
+              </div>
+              <div class="settings-panel">
+                <span>设置</span>
+                <strong>大小 320 px</strong>
+                <i></i>
+                <strong>宠物文件夹</strong>
+                <small>Codex / hatch-pet 兼容</small>
+              </div>
+              <div class="tray-menu">
+                <span>托盘菜单</span>
+                <strong>显示 / 隐藏</strong>
+                <strong>设置</strong>
+                <strong>退出</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="主导航">
+          <a class="brand" href="#">
+            <img src="assets/desktop-pet-launcher-icon.png" alt="" />
+            <span>Desktop Pet Launcher</span>
+          </a>
+          <div class="nav-links">
+            <a href="#features">特性</a>
+            <a href="#codex">Codex 兼容</a>
+            <a href="#download">下载</a>
+            <a class="github-button" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+                />
+              </svg>
+              GitHub
+            </a>
+          </div>
+        </nav>
+
+        <div class="hero-copy">
+          <p class="eyebrow">开源高清桌宠启动器</p>
+          <h1>
+            <span>高清桌宠，</span>
+            <span>安静住在桌面上。</span>
+          </h1>
+          <p class="lede">
+            Desktop Pet Launcher 用 Tauri 2 构建，支持透明无边框桌宠窗口、托盘控制、
+            自定义宠物文件夹、开机自启和 4x 高清宠物包。旧的 Codex / hatch-pet 宠物包也可以继续用。
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
+              下载最新版
+            </a>
+            <a class="secondary-action github-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+              <svg viewBox="0 0 16 16" aria-hidden="true">
+                <path
+                  d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+                />
+              </svg>
+              Star on GitHub
+            </a>
+          </div>
+          <div class="repo-badges" aria-label="项目状态">
+            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/stargazers">
+              <span>Stars</span>
+              <strong data-stars>Star</strong>
+            </a>
+            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
+              <span>Latest</span>
+              <strong>V0.1.1</strong>
+            </a>
+            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/release.yml">
+              <span>Release</span>
+              <strong>全平台安装包</strong>
+            </a>
+          </div>
+          <div class="hero-tags" aria-label="能力标签">
+            <span>透明置顶</span>
+            <span>托盘菜单</span>
+            <span>自定义文件夹</span>
+            <span>Codex 桌宠兼容</span>
+            <span>4x 高清包</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="quick-links" aria-label="项目入口">
+        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+          <span>Launcher 仓库</span>
+          <strong>源码与安装包</strong>
+          <p>查看应用源码、提交 Issue、下载历史版本。</p>
+          <em>打开仓库 →</em>
+        </a>
+        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
+          <span>Desktop Pet Skill</span>
+          <strong>制作高清宠物包</strong>
+          <p>给 Codex 使用的生成、校验、导入和打包流程。</p>
+          <em>打开 Skill →</em>
+        </a>
+        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
+          <span>Latest Release</span>
+          <strong>下载最新版</strong>
+          <p>Windows、macOS、Linux 安装包都在这里。</p>
+          <em>前往下载 →</em>
+        </a>
+      </section>
+
+      <section class="feature-band" id="features">
+        <div class="section-heading">
+          <p>Launcher</p>
+          <h2>桌宠体验，装进一个轻量启动器。</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <span>01</span>
+            <h3>真正像桌宠</h3>
+            <p>透明无边框、跳过任务栏、可置顶，也能在托盘里显示、隐藏、锁定和退出。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>位置和大小可控</h3>
+            <p>拖动后保存位置，设置页可调整宽高、动画速度、点击穿透和开机自启。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>宠物来源不受限</h3>
+            <p>默认扫描 Codex 宠物目录，也可以添加自己的本地文件夹作为宠物包库。</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h3>高清素材优先</h3>
+            <p>根据窗口尺寸和屏幕倍率选择 1x、2x 或 4x atlas，放大后尽量保持清晰。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="codex-band" id="codex">
+        <div class="codex-copy">
+          <p>Codex compatible</p>
+          <h2>兼容现有 Codex 桌宠，也给高清新包留足空间。</h2>
+          <p>
+            旧版 hatch-pet 包可以继续使用：pet.json、spritesheet.webp、192 x 208 cell、
+            1536 x 1872 atlas 都保持兼容。新的 desktop-pet skill 会优先制作 4x master，
+            再导出 2x 和 1x，让桌宠不是从小图硬拉大。
+          </p>
+          <div class="codex-actions">
+            <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
+              打开 Skill 仓库
+            </a>
+            <a class="secondary-action dark" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+              打开 Launcher 仓库
+            </a>
+          </div>
+        </div>
+        <div class="contract-table" role="table" aria-label="宠物包尺寸">
+          <div role="row">
+            <strong role="cell">倍率</strong>
+            <strong role="cell">单帧</strong>
+            <strong role="cell">图集</strong>
+          </div>
+          <div role="row">
+            <span role="cell">1x 兼容</span>
+            <span role="cell">192 x 208</span>
+            <span role="cell">1536 x 1872</span>
+          </div>
+          <div role="row">
+            <span role="cell">2x 可选</span>
+            <span role="cell">384 x 416</span>
+            <span role="cell">3072 x 3744</span>
+          </div>
+          <div role="row">
+            <span role="cell">4x 高清</span>
+            <span role="cell">768 x 832</span>
+            <span role="cell">6144 x 7488</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="download-band" id="download">
+        <div class="download-copy">
+          <p>Download</p>
+          <h2>下载最新版，开始放一只桌宠在屏幕边上。</h2>
+          <p>
+            Windows 用户推荐 setup.exe，也可以下载 MSI；macOS 选择 dmg；
+            Linux 可选择 AppImage、deb 或 rpm。所有安装包都从 GitHub Release 获取。
+          </p>
+        </div>
+        <div class="download-actions">
+          <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
+            打开下载页
+          </a>
+          <a class="secondary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
+            桌宠制作 Skill
+          </a>
+        </div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -2,6 +2,18 @@
 
 一个基于 **Tauri 2 + React + TypeScript + Vite + npm** 的高清桌宠启动器。它兼容旧版 `hatch-pet` 宠物包，也支持新的 2x/4x 高清 spritesheet，在桌宠放大后优先加载更清晰的运行资产。
 
+应用标识符：`top.nether.pet`
+
+官网源码在 `website/`，GitHub Pages workflow 会从这个目录发布展示页。
+
+默认 GitHub Pages 地址：
+
+```text
+https://wangling-miao.github.io/Desktop-Pet-Launcher/
+```
+
+如果要使用 `top.nether.pet` 作为官网域名，需要在 GitHub Pages 设置里添加 custom domain，并在 DNS 服务商处配置对应记录。
+
 ## 功能特性
 
 - 透明无边框桌宠窗口：默认置顶、跳过任务栏、支持拖拽。
@@ -76,7 +88,7 @@ $env:Path='C:\Users\chenp\.cargo\bin;' + $env:Path
 启动器默认扫描：
 
 - Windows: `%USERPROFILE%\.codex\pets\<pet-id>\`
-- Tauri app data: `pets/<pet-id>/`
+- App data: `%APPDATA%\top.nether.pet\pets\<pet-id>\`
 - 设置页中添加的自定义目录
 
 自定义目录可以是：
@@ -92,6 +104,26 @@ D:\Pets
 ```
 
 为了让自定义路径下的 WebP 能被 WebView 渲染，`assetProtocol.scope` 已放宽。这个 app 只把 Rust 扫描到的宠物资源路径传给前端，但仍建议只添加可信目录。
+
+## 数据目录
+
+业务配置：
+
+```text
+%APPDATA%\top.nether.pet\settings.json
+```
+
+App-local 宠物包：
+
+```text
+%APPDATA%\top.nether.pet\pets\<pet-id>\
+```
+
+WebView2 缓存：
+
+```text
+%LOCALAPPDATA%\top.nether.pet\EBWebView\
+```
 
 ## 宠物包格式
 
@@ -179,7 +211,7 @@ Atlas 固定为 8 列 9 行。状态行：
 工作流位于 `.github/workflows/release.yml`。它只在推送 `V*` tag 时执行，例如：
 
 ```powershell
-git tag V0.1.0
+git tag V0.1.1
 git push origin main --tags
 ```
 
