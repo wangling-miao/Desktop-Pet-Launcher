@@ -6,13 +6,12 @@
 
 官网源码在 `website/`，GitHub Pages workflow 会从这个目录发布展示页。
 
-默认 GitHub Pages 地址：
+GitHub Pages 地址：
 
 ```text
-https://wangling-miao.github.io/Desktop-Pet-Launcher/
+https://top.nether.pet
 ```
 
-如果要使用 `top.nether.pet` 作为官网域名，需要在 GitHub Pages 设置里添加 custom domain，并在 DNS 服务商处配置对应记录。
 
 ## 功能特性
 
