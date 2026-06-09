@@ -9,7 +9,7 @@
 GitHub Pages 地址：
 
 ```text
-https://top.nether.pet
+https://pet.nether.top
 ```
 
 
