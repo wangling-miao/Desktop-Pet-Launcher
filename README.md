@@ -2,12 +2,6 @@
 
 一个基于 **Tauri 2 + React + TypeScript + Vite + npm** 的高清桌宠启动器。它兼容旧版 `hatch-pet` 宠物包，也支持新的 2x/4x 高清 spritesheet，在桌宠放大后优先加载更清晰的运行资产。
 
-作者 Git 身份：
-
-```text
-亡灵 <202405721336@smail.xtu.edu.cn>
-```
-
 ## 功能特性
 
 - 透明无边框桌宠窗口：默认置顶、跳过任务栏、支持拖拽。
