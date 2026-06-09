@@ -52,13 +52,7 @@ npm run tauri:dev
 npm run tauri:build
 ```
 
-`tauri:dev` 和 `tauri:build` 需要本机安装 Rust、Cargo、平台编译工具和 WebView2。Windows 下如果 Rust 不在 PATH，可以临时注入：
-
-```powershell
-$env:CARGO_HOME='C:\Users\chenp\.cargo'
-$env:RUSTUP_HOME='C:\Users\chenp\.rustup'
-$env:Path='C:\Users\chenp\.cargo\bin;' + $env:Path
-```
+`tauri:dev` 和 `tauri:build` 需要本机安装 Rust、Cargo、平台编译工具和 WebView2。
 
 ## 项目结构
 
