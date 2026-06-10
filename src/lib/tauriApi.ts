@@ -5,6 +5,33 @@ import { open } from "@tauri-apps/plugin-dialog";
 import type { AppSettings } from "./settings";
 import type { PetPackage } from "./petContract";
 
+export interface GalleryPet {
+  id: string;
+  name: string;
+  displayName?: string;
+  version: string;
+  author: string;
+  description: string;
+  tags: string[];
+  license: string;
+  preview: string;
+  previewImage?: string;
+  manifest?: string;
+  download: string;
+  downloadSize?: number;
+  downloadSha256?: string;
+  format: string;
+  resolution: string;
+  createdAt: string;
+}
+
+export interface GalleryIndex {
+  schemaVersion: number;
+  generatedAt: string;
+  repository?: string;
+  pets: GalleryPet[];
+}
+
 export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
@@ -29,6 +56,13 @@ export async function revealPetFolder(pathOrId: string): Promise<void> {
     return;
   }
   await invoke("reveal_pet_folder", { pathOrId });
+}
+
+export async function importPetFromUrl(url: string): Promise<PetPackage | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+  return invoke<PetPackage>("import_pet_from_url", { url });
 }
 
 export async function choosePetFolder(): Promise<string | null> {

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-10T00:12:53.463Z",
+  "repository": "https://github.com/wangling-miao/awesome-desktop-pets",
+  "pets": [
+    {
+      "id": "venti-bard",
+      "name": "Venti Bard",
+      "displayName": "Venti Bard",
+      "version": "1.0.0",
+      "author": "Desktop Pet Launcher",
+      "description": "A tiny wind-bard pet inspired by Venti, with teal braids, a green cape, and a bright bard hat.",
+      "tags": [
+        "bard",
+        "fantasy",
+        "cute"
+      ],
+      "license": "Fan-art sample, redistribution requires rights review",
+      "preview": "pets/venti-bard/preview.gif",
+      "previewImage": "pets/venti-bard/preview.png",
+      "manifest": "pets/venti-bard/pet.json",
+      "download": "downloads/venti-bard-v1.0.0.zip",
+      "downloadSize": 2154623,
+      "downloadSha256": "a3eecea69f74f3012fa155e8a039a68f0c35f507deb606db4e109f85e11a5bdd",
+      "format": "hatch-pet-compatible",
+      "resolution": "1x",
+      "createdAt": "2026-06-10"
+    }
+  ]
+}

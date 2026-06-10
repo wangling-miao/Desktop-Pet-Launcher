@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
+use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
@@ -28,8 +30,10 @@ struct PetPackage {
 #[serde(rename_all = "camelCase")]
 struct PetManifest {
     id: String,
-    #[serde(rename = "displayName")]
-    display_name: String,
+    #[serde(rename = "displayName", default)]
+    display_name: Option<String>,
+    #[serde(default)]
+    name: Option<String>,
     description: String,
     #[serde(rename = "spritesheetPath")]
     spritesheet_path: String,
@@ -187,6 +191,61 @@ fn reveal_pet_folder(path_or_id: String, app: AppHandle) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String> {
+    let parsed = reqwest::Url::parse(url.trim()).map_err(|error| error.to_string())?;
+    if !matches!(parsed.scheme(), "https" | "http") {
+        return Err("Only http and https pet package URLs are supported".to_string());
+    }
+
+    let response = reqwest::blocking::get(parsed).map_err(|error| error.to_string())?;
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status {}", response.status()));
+    }
+    let bytes = response.bytes().map_err(|error| error.to_string())?;
+
+    let app_data = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let pets_root = app_data.join("pets");
+    let imports_root = app_data.join("imports");
+    fs::create_dir_all(&pets_root).map_err(|error| error.to_string())?;
+    fs::create_dir_all(&imports_root).map_err(|error| error.to_string())?;
+
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_millis();
+    let temp_dir = imports_root.join(format!("import-{stamp}"));
+    fs::create_dir_all(&temp_dir).map_err(|error| error.to_string())?;
+
+    let imported = (|| {
+        let extracted_dir = extract_pet_zip(bytes.as_ref(), &temp_dir)?;
+        let package = read_pet_package(&extracted_dir)?;
+        if !is_safe_pet_id(&package.id) {
+            return Err(format!("Unsafe pet id: {}", package.id));
+        }
+
+        let destination = pets_root.join(&package.id);
+        let pets_root_canonical = pets_root.canonicalize().map_err(|error| error.to_string())?;
+        if destination.exists() {
+            let destination_canonical =
+                destination.canonicalize().map_err(|error| error.to_string())?;
+            if !destination_canonical.starts_with(&pets_root_canonical) {
+                return Err(format!(
+                    "Refusing to replace path outside pet root: {}",
+                    destination_canonical.display()
+                ));
+            }
+            fs::remove_dir_all(&destination_canonical).map_err(|error| error.to_string())?;
+        }
+
+        copy_dir_all(&extracted_dir, &destination)?;
+        read_pet_package(&destination)
+    })();
+
+    let _ = fs::remove_dir_all(&temp_dir);
+    imported
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
@@ -215,6 +274,7 @@ pub fn run() {
             show_settings_window,
             apply_pet_window_settings,
             reveal_pet_folder,
+            import_pet_from_url,
         ])
         .setup(|app| {
             setup_tray(app.handle())?;
@@ -357,9 +417,15 @@ fn read_pet_package(root: &Path) -> Result<PetPackage, String> {
         return Err(format!("Missing 1x spritesheet: {}", one_x_path.display()));
     }
 
+    let display_name = manifest
+        .display_name
+        .clone()
+        .or_else(|| manifest.name.clone())
+        .unwrap_or_else(|| manifest.id.clone());
+
     let package = PetPackage {
         id: manifest.id,
-        display_name: manifest.display_name,
+        display_name,
         description: manifest.description,
         root_dir: root.to_string_lossy().to_string(),
         manifest_path: manifest_path.to_string_lossy().to_string(),
@@ -381,6 +447,80 @@ fn read_pet_package(root: &Path) -> Result<PetPackage, String> {
     };
 
     Ok(package)
+}
+
+fn extract_pet_zip(bytes: &[u8], destination: &Path) -> Result<PathBuf, String> {
+    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+
+    for index in 0..archive.len() {
+        let mut file = archive.by_index(index).map_err(|error| error.to_string())?;
+        let Some(enclosed_name) = file.enclosed_name().map(|path| path.to_owned()) else {
+            return Err(format!("Unsafe zip entry: {}", file.name()));
+        };
+        let out_path = destination.join(enclosed_name);
+
+        if file.is_dir() {
+            fs::create_dir_all(&out_path).map_err(|error| error.to_string())?;
+            continue;
+        }
+
+        if let Some(parent) = out_path.parent() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        let mut out_file = fs::File::create(&out_path).map_err(|error| error.to_string())?;
+        io::copy(&mut file, &mut out_file).map_err(|error| error.to_string())?;
+    }
+
+    find_extracted_pet_dir(destination)
+}
+
+fn find_extracted_pet_dir(root: &Path) -> Result<PathBuf, String> {
+    if root.join("pet.json").is_file() {
+        return Ok(root.to_path_buf());
+    }
+
+    let mut candidates = Vec::new();
+    let entries = fs::read_dir(root).map_err(|error| error.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_dir() && path.join("pet.json").is_file() {
+            candidates.push(path);
+        }
+    }
+
+    if candidates.len() == 1 {
+        return Ok(candidates.remove(0));
+    }
+
+    Err("Imported zip must contain exactly one pet.json at the root or inside one folder".to_string())
+}
+
+fn copy_dir_all(source: &Path, destination: &Path) -> Result<(), String> {
+    fs::create_dir_all(destination).map_err(|error| error.to_string())?;
+    for entry in fs::read_dir(source).map_err(|error| error.to_string())? {
+        let entry = entry.map_err(|error| error.to_string())?;
+        let entry_type = entry.file_type().map_err(|error| error.to_string())?;
+        let target = destination.join(entry.file_name());
+        if entry_type.is_dir() {
+            copy_dir_all(&entry.path(), &target)?;
+        } else if entry_type.is_file() {
+            fs::copy(entry.path(), target).map_err(|error| error.to_string())?;
+        }
+    }
+    Ok(())
+}
+
+fn is_safe_pet_id(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    if !(3..=64).contains(&bytes.len()) {
+        return false;
+    }
+    let is_alnum = |byte: u8| byte.is_ascii_lowercase() || byte.is_ascii_digit();
+    is_alnum(bytes[0])
+        && is_alnum(bytes[bytes.len() - 1])
+        && bytes
+            .iter()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
 }
 
 fn home_dir() -> Option<PathBuf> {

@@ -1,0 +1,26 @@
+{
+  "id": "venti-bard",
+  "name": "Venti Bard",
+  "displayName": "Venti Bard",
+  "version": "1.0.0",
+  "author": "Desktop Pet Launcher",
+  "description": "A tiny wind-bard pet inspired by Venti, with teal braids, a green cape, and a bright bard hat.",
+  "tags": ["bard", "fantasy", "cute"],
+  "license": "Fan-art sample, redistribution requires rights review",
+  "preview": "preview.gif",
+  "previewImage": "preview.png",
+  "format": "hatch-pet-compatible",
+  "resolution": "1x",
+  "createdAt": "2026-06-10",
+  "spritesheetPath": "spritesheet.webp",
+  "spritesheets": {
+    "1x": "spritesheet.webp"
+  },
+  "cellSize": {
+    "width": 192,
+    "height": 208
+  },
+  "sourceScale": 1,
+  "pixelated": false
+}
+

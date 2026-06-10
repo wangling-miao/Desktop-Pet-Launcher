@@ -20,7 +20,11 @@ export interface AppSettings {
   idleVariety: boolean;
   keepAspectRatio: boolean;
   petFolders: string[];
+  galleryIndexUrl: string;
 }
+
+export const DEFAULT_GALLERY_INDEX_URL =
+  "https://wangling-miao.github.io/awesome-desktop-pets/index.json";
 
 export const DEFAULT_SETTINGS: AppSettings = {
   activePetId: null,
@@ -41,6 +45,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   idleVariety: true,
   keepAspectRatio: true,
   petFolders: [],
+  galleryIndexUrl: DEFAULT_GALLERY_INDEX_URL,
 };
 
 let settingsStore: Store | null = null;
@@ -91,6 +96,10 @@ export function normalizeSettings(saved?: Partial<AppSettings> | null): AppSetti
     idleVariety: Boolean(merged.idleVariety),
     keepAspectRatio: Boolean(merged.keepAspectRatio),
     petFolders: normalizeStringArray(merged.petFolders),
+    galleryIndexUrl:
+      typeof merged.galleryIndexUrl === "string" && merged.galleryIndexUrl.trim()
+        ? merged.galleryIndexUrl.trim()
+        : DEFAULT_GALLERY_INDEX_URL,
   };
 }
 

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Download,
   Eye,
   FolderPlus,
   FolderOpen,
+  Globe2,
   Lock,
   Maximize2,
   Move,
@@ -12,20 +14,30 @@ import {
   RefreshCw,
   Rocket,
   Save,
+  Search,
   Sparkles,
   Trash2,
   ZoomIn,
 } from "lucide-react";
 import { BASE_CELL, PET_STATES, type PetPackage, type PetState } from "../lib/petContract";
-import { DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from "../lib/settings";
+import {
+  DEFAULT_GALLERY_INDEX_URL,
+  DEFAULT_SETTINGS,
+  loadSettings,
+  saveSettings,
+  type AppSettings,
+} from "../lib/settings";
 import {
   applyPetWindowSettings,
   choosePetFolder,
+  importPetFromUrl,
   listPetPackages,
   notifyPetSettings,
   readAutostart,
   revealPetFolder,
   writeAutostart,
+  type GalleryIndex,
+  type GalleryPet,
 } from "../lib/tauriApi";
 
 const STATE_LABELS: Record<PetState, string> = {
@@ -43,6 +55,10 @@ const STATE_LABELS: Record<PetState, string> = {
 export function SettingsWindow() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [packages, setPackages] = useState<PetPackage[]>([]);
+  const [galleryPets, setGalleryPets] = useState<GalleryPet[]>([]);
+  const [gallerySearch, setGallerySearch] = useState("");
+  const [galleryUrlDraft, setGalleryUrlDraft] = useState(DEFAULT_GALLERY_INDEX_URL);
+  const [galleryLoading, setGalleryLoading] = useState(false);
   const [status, setStatus] = useState("已就绪");
   const [newPetFolder, setNewPetFolder] = useState("");
 
@@ -51,6 +67,19 @@ export function SettingsWindow() {
     [packages, settings.activePetId],
   );
   const scalePercent = Math.round((settings.width / BASE_CELL.width) * 100);
+  const filteredGalleryPets = useMemo(() => {
+    const query = gallerySearch.trim().toLowerCase();
+    if (!query) {
+      return galleryPets;
+    }
+    return galleryPets.filter((pet) =>
+      [pet.name, pet.displayName, pet.author, pet.description, ...(pet.tags ?? [])]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [galleryPets, gallerySearch]);
 
   const refreshPackages = useCallback(async (petFolders: string[] = []) => {
     const found = await listPetPackages(petFolders);
@@ -74,6 +103,8 @@ export function SettingsWindow() {
         autostart,
         activePetId: loadedSettings.activePetId ?? foundPackages[0]?.id ?? null,
       });
+      setGalleryUrlDraft(loadedSettings.galleryIndexUrl);
+      void loadGallery(loadedSettings.galleryIndexUrl, false);
     }
     void boot();
     return () => {
@@ -137,6 +168,58 @@ export function SettingsWindow() {
     const found = await refreshPackages(settings.petFolders);
     const activePetId = settings.activePetId ?? found[0]?.id ?? null;
     await commit({ ...settings, activePetId }, "宠物列表已刷新");
+  }
+
+  async function loadGallery(indexUrl = galleryUrlDraft, persist = true) {
+    const trimmed = indexUrl.trim();
+    if (!trimmed) {
+      setStatus("请输入图鉴索引地址");
+      return;
+    }
+
+    setGalleryLoading(true);
+    try {
+      if (persist && trimmed !== settings.galleryIndexUrl) {
+        await commit({ ...settings, galleryIndexUrl: trimmed }, "图鉴地址已保存");
+      }
+      const response = await fetch(trimmed, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const index = (await response.json()) as GalleryIndex;
+      setGalleryPets(Array.isArray(index.pets) ? index.pets : []);
+      setStatus(`图鉴已读取：${index.pets?.length ?? 0} 个桌宠`);
+    } catch (error) {
+      console.error("Failed to load gallery", error);
+      setStatus("图鉴读取失败，请检查索引地址或网络");
+    } finally {
+      setGalleryLoading(false);
+    }
+  }
+
+  async function importGalleryPet(pet: GalleryPet) {
+    const downloadUrl = resolveGalleryUrl(pet.download, settings.galleryIndexUrl);
+    if (!downloadUrl) {
+      setStatus("这个桌宠没有下载地址");
+      return;
+    }
+
+    try {
+      setStatus(`正在导入 ${pet.displayName ?? pet.name}`);
+      const imported = await importPetFromUrl(downloadUrl);
+      if (!imported) {
+        setStatus("当前预览环境不支持导入");
+        return;
+      }
+      const found = await refreshPackages(settings.petFolders);
+      const activePetId = found.some((candidate) => candidate.id === imported.id)
+        ? imported.id
+        : settings.activePetId;
+      await commit({ ...settings, activePetId }, `${imported.displayName} 已导入`);
+    } catch (error) {
+      console.error("Failed to import gallery pet", error);
+      setStatus("导入失败，请确认下载链接是 zip 宠物包");
+    }
   }
 
   async function addPetFolder(folder = newPetFolder) {
@@ -219,6 +302,14 @@ export function SettingsWindow() {
           title="动作"
         >
           <Play size={20} />
+        </button>
+        <button
+          className="rail-button"
+          type="button"
+          onClick={() => scrollToPanel("gallery-section")}
+          title="图鉴"
+        >
+          <Globe2 size={20} />
         </button>
       </aside>
 
@@ -357,6 +448,62 @@ export function SettingsWindow() {
                       <Trash2 size={15} />
                     </button>
                   </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="panel gallery-panel" id="gallery-section">
+            <div className="panel-title">
+              <Globe2 size={18} />
+              <h2>在线图鉴</h2>
+            </div>
+            <div className="gallery-controls">
+              <label className="field">
+                <span>索引地址</span>
+                <input
+                  type="url"
+                  value={galleryUrlDraft}
+                  placeholder={DEFAULT_GALLERY_INDEX_URL}
+                  onChange={(event) => setGalleryUrlDraft(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>搜索</span>
+                <input
+                  type="search"
+                  value={gallerySearch}
+                  placeholder="名称、作者、标签"
+                  onChange={(event) => setGallerySearch(event.target.value)}
+                />
+              </label>
+              <button type="button" onClick={() => loadGallery()} disabled={galleryLoading}>
+                <Search size={16} />
+                {galleryLoading ? "读取中" : "读取图鉴"}
+              </button>
+            </div>
+            <div className="gallery-list">
+              {filteredGalleryPets.length === 0 ? (
+                <span className="folder-empty">暂无可显示的桌宠</span>
+              ) : (
+                filteredGalleryPets.map((pet) => (
+                  <article className="gallery-pet-card" key={`${pet.id}-${pet.version}`}>
+                    <img
+                      src={resolveGalleryUrl(pet.previewImage ?? pet.preview, settings.galleryIndexUrl)}
+                      alt=""
+                    />
+                    <div>
+                      <strong>{pet.displayName ?? pet.name}</strong>
+                      <span>{pet.description}</span>
+                      <small>
+                        {pet.author} · {pet.resolution} · {formatBytes(pet.downloadSize)}
+                      </small>
+                    </div>
+                    <button type="button" onClick={() => importGalleryPet(pet)}>
+                      <Download size={16} />
+                      导入
+                    </button>
+                  </article>
                 ))
               )}
             </div>
@@ -573,4 +720,25 @@ function ToggleRow({ label, value, icon, onChange }: ToggleRowProps) {
       <input type="checkbox" checked={value} onChange={(event) => onChange(event.target.checked)} />
     </label>
   );
+}
+
+function resolveGalleryUrl(value: string | undefined, indexUrl: string): string {
+  if (!value) {
+    return "";
+  }
+  try {
+    return new URL(value, new URL(".", indexUrl)).href;
+  } catch {
+    return value;
+  }
+}
+
+function formatBytes(value?: number): string {
+  if (!value) {
+    return "未知大小";
+  }
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KB`;
+  }
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
 }

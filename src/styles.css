@@ -450,6 +450,105 @@ h2 {
   border-radius: 7px;
 }
 
+.gallery-panel {
+  grid-column: 1 / -1;
+}
+
+.gallery-controls {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(180px, 0.8fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.gallery-controls .field {
+  margin-bottom: 0;
+}
+
+.gallery-controls button,
+.gallery-pet-card button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #fffaf2;
+  background: var(--ink);
+  border-radius: 7px;
+  font-weight: 800;
+}
+
+.gallery-controls button:disabled,
+.gallery-pet-card button:disabled {
+  opacity: 0.42;
+}
+
+.gallery-list {
+  max-height: 420px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.gallery-pet-card {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #e1e6e0;
+  border-radius: 8px;
+  background: #fffef9;
+}
+
+.gallery-pet-card img {
+  width: 82px;
+  height: 82px;
+  object-fit: contain;
+  border: 1px solid #e4e0d4;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(23, 22, 21, 0.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(23, 22, 21, 0.06) 1px, transparent 1px),
+    #f1efe4;
+  background-size: 14px 14px;
+}
+
+.gallery-pet-card div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.gallery-pet-card strong,
+.gallery-pet-card span,
+.gallery-pet-card small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gallery-pet-card strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.gallery-pet-card span,
+.gallery-pet-card small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.gallery-pet-card button {
+  min-width: 82px;
+  padding: 0 12px;
+}
+
 .slider-field {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr) 54px;
@@ -536,6 +635,17 @@ h2 {
 
   .hero-panel {
     grid-template-columns: 1fr;
+  }
+
+  .gallery-controls,
+  .gallery-list,
+  .gallery-pet-card {
+    grid-template-columns: 1fr;
+  }
+
+  .gallery-pet-card img {
+    width: 100%;
+    height: 132px;
   }
 
   .scale-readout {

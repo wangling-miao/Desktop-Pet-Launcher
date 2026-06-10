@@ -18,6 +18,7 @@ https://pet.nether.top
 - 透明无边框桌宠窗口：默认置顶、跳过任务栏、支持拖拽。
 - 独立设置窗口：宠物选择、大小缩放、精确宽高、位置、动作、动画速度、渲染方式、行为开关。
 - 自定义宠物目录：默认扫描 `~/.codex/pets` 和应用数据目录，也可以在设置页添加任意宠物库目录。
+- 在线桌宠图鉴：读取 `awesome-desktop-pets` 的静态 `index.json`，可在设置页浏览并一键导入 zip 宠物包。
 - 高清资源选择：根据窗口尺寸和 `devicePixelRatio` 自动选择 1x、2x 或 4x atlas。
 - 任务栏托盘：显示/隐藏、设置、锁定/解锁、刷新宠物、退出。
 - 持久化配置：使用 Tauri Store 保存 `settings.json`。
@@ -25,6 +26,7 @@ https://pet.nether.top
 - 单实例：避免重复启动。
 - Windows GUI 子系统：直接启动 release exe 不弹出 cmd 窗口。
 - Release CI：推送 `V*` tag 后自动构建 Windows、Linux、macOS 安装包并发布 GitHub Release。
+- 官网图鉴页：`https://pet.nether.top/gallery/`
 
 ## 快速开始
 
@@ -112,11 +114,35 @@ App-local 宠物包：
 %APPDATA%\top.nether.pet\pets\<pet-id>\
 ```
 
+在线图鉴导入的 zip 宠物包也会解压到这里。
+
 WebView2 缓存：
 
 ```text
 %LOCALAPPDATA%\top.nether.pet\EBWebView\
 ```
+
+## 在线桌宠图鉴
+
+默认索引地址：
+
+```text
+https://wangling-miao.github.io/awesome-desktop-pets/index.json
+```
+
+图鉴仓库：
+
+```text
+https://github.com/wangling-miao/awesome-desktop-pets
+```
+
+设置页的“在线图鉴”面板会读取索引，展示宠物预览、作者、分辨率和大小。点击“导入”后，启动器下载对应 zip，做安全解压，并安装到：
+
+```text
+%APPDATA%\top.nether.pet\pets\<pet-id>\
+```
+
+技术用户通过 Pull Request 向 `awesome-desktop-pets` 投稿；普通用户只需要在官网或启动器内浏览和下载。
 
 ## 宠物包格式
 
@@ -195,7 +221,8 @@ Atlas 固定为 8 列 9 行。状态行：
   "pixelated": false,
   "idleVariety": true,
   "keepAspectRatio": true,
-  "petFolders": []
+  "petFolders": [],
+  "galleryIndexUrl": "https://wangling-miao.github.io/awesome-desktop-pets/index.json"
 }
 ```
 
@@ -204,7 +231,7 @@ Atlas 固定为 8 列 9 行。状态行：
 工作流位于 `.github/workflows/release.yml`。它只在推送 `V*` tag 时执行，例如：
 
 ```powershell
-git tag V0.1.1
+git tag V0.2.0
 git push origin main --tags
 ```
 
