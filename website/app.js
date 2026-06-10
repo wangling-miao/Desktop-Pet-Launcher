@@ -31,10 +31,15 @@ if (typeof reducedMotionQuery.addEventListener === "function") {
   reducedMotionQuery.addListener(syncMotionPreference);
 }
 
+const launcherRepoApi = "https://api.github.com/repos/wangling-miao/Desktop-Pet-Launcher";
+const launcherLatestRelease = "https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest";
 const starCount = document.querySelector("[data-stars]");
+const latestReleaseBadge = document.querySelector("[data-latest-release]");
+const releaseAssetLinks = document.querySelectorAll("[data-release-asset]");
+const releasePageLinks = document.querySelectorAll("[data-release-page]");
 
 if (starCount) {
-  fetch("https://api.github.com/repos/wangling-miao/Desktop-Pet-Launcher")
+  fetch(launcherRepoApi)
     .then((response) => (response.ok ? response.json() : null))
     .then((repo) => {
       if (typeof repo?.stargazers_count === "number") {
@@ -42,6 +47,51 @@ if (starCount) {
       }
     })
     .catch(() => {});
+}
+
+if (latestReleaseBadge || releaseAssetLinks.length > 0 || releasePageLinks.length > 0) {
+  fetch(`${launcherRepoApi}/releases/latest`, { cache: "no-store" })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((release) => {
+      if (!release) {
+        return;
+      }
+
+      if (latestReleaseBadge && release.tag_name) {
+        latestReleaseBadge.textContent = release.tag_name;
+      }
+
+      const releasePage = release.html_url || launcherLatestRelease;
+      releasePageLinks.forEach((link) => {
+        link.href = releasePage;
+      });
+
+      const assets = Array.isArray(release.assets) ? release.assets : [];
+      releaseAssetLinks.forEach((link) => {
+        const asset = findReleaseAsset(assets, link.dataset.releaseAsset);
+        if (asset?.browser_download_url) {
+          link.href = asset.browser_download_url;
+          link.title = asset.name || "";
+        } else {
+          link.href = releasePage;
+        }
+      });
+    })
+    .catch(() => {});
+}
+
+function findReleaseAsset(assets, kind) {
+  const matchers = {
+    "windows-setup": /_x64-setup\.exe$/i,
+    "windows-msi": /_x64_[^/]+\.msi$/i,
+    "macos-arm": /_aarch64\.dmg$/i,
+    "macos-intel": /_x64\.dmg$/i,
+    "linux-appimage": /_amd64\.AppImage$/i,
+    "linux-deb": /_amd64\.deb$/i,
+    "linux-rpm": /-0\.\d+\.\d+-1\.x86_64\.rpm$|-\d+\.\d+\.\d+-1\.x86_64\.rpm$/i,
+  };
+  const matcher = matchers[kind];
+  return matcher ? assets.find((asset) => matcher.test(asset.name || "")) : null;
 }
 
 const galleryGrid = document.querySelector("[data-gallery-grid]");

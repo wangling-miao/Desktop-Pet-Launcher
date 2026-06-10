@@ -265,7 +265,7 @@ Atlas 固定为 8 列 9 行。状态行：
 工作流位于 `.github/workflows/release.yml`。它只在推送 `V*` tag 时执行，例如：
 
 ```powershell
-git tag V0.2.0
+git tag Vx.y.z
 git push origin main --tags
 ```
 
