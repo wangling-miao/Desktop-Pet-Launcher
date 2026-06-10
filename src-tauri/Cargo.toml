@@ -1,6 +1,6 @@
 [package]
 name = "desktop-pet-launcher"
-version = "0.2.9"
+version = "0.2.10"
 description = "A high-resolution desktop pet launcher"
 authors = ["亡灵 <202405721336@smail.xtu.edu.cn>"]
 edition = "2021"
@@ -23,6 +23,9 @@ tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-store = "2"
 zip = "2"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
 
 [features]
 default = ["custom-protocol"]

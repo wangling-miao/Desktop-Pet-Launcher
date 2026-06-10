@@ -9,8 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
-    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Runtime, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
+    AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
 #[derive(Debug, Clone, Serialize)]
@@ -94,6 +93,22 @@ struct PetWindowSettingsPatch {
     height: Option<f64>,
     always_on_top: Option<bool>,
     click_through: Option<bool>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowFrame {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+}
+
+#[derive(Debug, Clone, Copy, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WindowPoint {
+    x: f64,
+    y: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -191,20 +206,23 @@ fn apply_pet_window_settings<R: Runtime>(
     app: AppHandle<R>,
     patch: PetWindowSettingsPatch,
 ) -> Result<(), String> {
-    let window = app
-        .get_webview_window("pet")
-        .ok_or_else(|| "Pet window is not available".to_string())?;
+    let window = pet_window(&app)?;
 
-    if let (Some(width), Some(height)) = (patch.width, patch.height) {
-        window
-            .set_size(LogicalSize::new(width, height))
-            .map_err(|error| error.to_string())?;
-    }
-
-    if let (Some(x), Some(y)) = (patch.x, patch.y) {
-        window
-            .set_position(LogicalPosition::new(x, y))
-            .map_err(|error| error.to_string())?;
+    if patch.x.is_some() || patch.y.is_some() || patch.width.is_some() || patch.height.is_some() {
+        let mut frame = read_window_frame(&window)?;
+        if let Some(x) = patch.x {
+            frame.x = x;
+        }
+        if let Some(y) = patch.y {
+            frame.y = y;
+        }
+        if let Some(width) = patch.width {
+            frame.width = width;
+        }
+        if let Some(height) = patch.height {
+            frame.height = height;
+        }
+        write_window_frame(&window, frame)?;
     }
 
     if let Some(always_on_top) = patch.always_on_top {
@@ -220,6 +238,34 @@ fn apply_pet_window_settings<R: Runtime>(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn get_pet_window_frame<R: Runtime>(app: AppHandle<R>) -> Result<WindowFrame, String> {
+    read_window_frame(&pet_window(&app)?)
+}
+
+#[tauri::command]
+fn set_pet_window_frame<R: Runtime>(
+    app: AppHandle<R>,
+    frame: WindowFrame,
+) -> Result<(), String> {
+    write_window_frame(&pet_window(&app)?, frame)
+}
+
+#[tauri::command]
+fn move_pet_window<R: Runtime>(app: AppHandle<R>, x: f64, y: f64) -> Result<(), String> {
+    let window = pet_window(&app)?;
+    let mut frame = read_window_frame(&window)?;
+    frame.x = x;
+    frame.y = y;
+    write_window_frame(&window, frame)
+}
+
+#[tauri::command]
+fn get_cursor_position<R: Runtime>(app: AppHandle<R>) -> Result<Option<WindowPoint>, String> {
+    let window = pet_window(&app)?;
+    read_cursor_position(&window)
 }
 
 #[tauri::command]
@@ -416,6 +462,10 @@ pub fn run() {
             validate_pet_package,
             show_settings_window,
             apply_pet_window_settings,
+            get_pet_window_frame,
+            set_pet_window_frame,
+            move_pet_window,
+            get_cursor_position,
             read_settings_backup,
             write_settings_backup,
             reveal_pet_folder,
@@ -629,6 +679,138 @@ fn toggle_pet_window<R: Runtime>(app: &AppHandle<R>) {
             }
         }
     }
+}
+
+fn pet_window<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewWindow<R>, String> {
+    app.get_webview_window("pet")
+        .ok_or_else(|| "Pet window is not available".to_string())
+}
+
+#[cfg(windows)]
+fn read_window_frame<R: Runtime>(window: &WebviewWindow<R>) -> Result<WindowFrame, String> {
+    use windows::Win32::Foundation::RECT;
+    use windows::Win32::UI::WindowsAndMessaging::GetWindowRect;
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let mut rect = RECT::default();
+    unsafe { GetWindowRect(hwnd, &mut rect) }.map_err(|error| error.to_string())?;
+    let scale_factor = window_scale_factor(window)?;
+
+    Ok(WindowFrame {
+        x: logical_from_physical(rect.left, scale_factor),
+        y: logical_from_physical(rect.top, scale_factor),
+        width: logical_size_from_physical(rect.right - rect.left, scale_factor),
+        height: logical_size_from_physical(rect.bottom - rect.top, scale_factor),
+    })
+}
+
+#[cfg(not(windows))]
+fn read_window_frame<R: Runtime>(window: &WebviewWindow<R>) -> Result<WindowFrame, String> {
+    let scale_factor = window_scale_factor(window)?;
+    let position = window.outer_position().map_err(|error| error.to_string())?;
+    let size = window.outer_size().map_err(|error| error.to_string())?;
+
+    Ok(WindowFrame {
+        x: logical_from_physical(position.x, scale_factor),
+        y: logical_from_physical(position.y, scale_factor),
+        width: logical_size_from_physical(size.width as i32, scale_factor),
+        height: logical_size_from_physical(size.height as i32, scale_factor),
+    })
+}
+
+#[cfg(windows)]
+fn write_window_frame<R: Runtime>(
+    window: &WebviewWindow<R>,
+    frame: WindowFrame,
+) -> Result<(), String> {
+    use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER};
+
+    let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+    let scale_factor = window_scale_factor(window)?;
+    unsafe {
+        SetWindowPos(
+            hwnd,
+            None,
+            physical_from_logical(frame.x, scale_factor),
+            physical_from_logical(frame.y, scale_factor),
+            physical_size_from_logical(frame.width, scale_factor),
+            physical_size_from_logical(frame.height, scale_factor),
+            SWP_NOZORDER | SWP_NOACTIVATE,
+        )
+    }
+    .map_err(|error| error.to_string())
+}
+
+#[cfg(not(windows))]
+fn write_window_frame<R: Runtime>(
+    window: &WebviewWindow<R>,
+    frame: WindowFrame,
+) -> Result<(), String> {
+    window
+        .set_position(tauri::LogicalPosition::new(frame.x, frame.y))
+        .map_err(|error| error.to_string())?;
+    window
+        .set_size(tauri::LogicalSize::new(frame.width, frame.height))
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(windows)]
+fn read_cursor_position<R: Runtime>(
+    window: &WebviewWindow<R>,
+) -> Result<Option<WindowPoint>, String> {
+    use windows::Win32::Foundation::POINT;
+    use windows::Win32::UI::WindowsAndMessaging::GetCursorPos;
+
+    let mut point = POINT::default();
+    unsafe { GetCursorPos(&mut point) }.map_err(|error| error.to_string())?;
+    let scale_factor = window_scale_factor(window)?;
+    Ok(Some(WindowPoint {
+        x: logical_from_physical(point.x, scale_factor),
+        y: logical_from_physical(point.y, scale_factor),
+    }))
+}
+
+#[cfg(not(windows))]
+fn read_cursor_position<R: Runtime>(
+    window: &WebviewWindow<R>,
+) -> Result<Option<WindowPoint>, String> {
+    let position = window.cursor_position().map_err(|error| error.to_string())?;
+    let scale_factor = window_scale_factor(window)?;
+    Ok(Some(WindowPoint {
+        x: (position.x / scale_factor).round(),
+        y: (position.y / scale_factor).round(),
+    }))
+}
+
+fn window_scale_factor<R: Runtime>(window: &WebviewWindow<R>) -> Result<f64, String> {
+    let scale_factor = window.scale_factor().map_err(|error| error.to_string())?;
+    if scale_factor.is_finite() && scale_factor > 0.0 {
+        Ok(scale_factor)
+    } else {
+        Ok(1.0)
+    }
+}
+
+fn logical_from_physical(value: i32, scale_factor: f64) -> f64 {
+    (value as f64 / scale_factor).round()
+}
+
+fn logical_size_from_physical(value: i32, scale_factor: f64) -> f64 {
+    (value.max(1) as f64 / scale_factor).round().max(1.0)
+}
+
+fn physical_from_logical(value: f64, scale_factor: f64) -> i32 {
+    round_to_i32(value * scale_factor)
+}
+
+fn physical_size_from_logical(value: f64, scale_factor: f64) -> i32 {
+    round_to_i32(value.max(1.0) * scale_factor).max(1)
+}
+
+fn round_to_i32(value: f64) -> i32 {
+    value
+        .round()
+        .clamp(i32::MIN as f64, i32::MAX as f64) as i32
 }
 
 fn collect_pet_packages(root: &Path, packages: &mut Vec<PetPackage>) {

@@ -1,11 +1,6 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
-import {
-  LogicalPosition,
-  LogicalSize,
-  cursorPosition,
-  getCurrentWindow,
-} from "@tauri-apps/api/window";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open } from "@tauri-apps/plugin-dialog";
 import packageInfo from "../../package.json";
@@ -92,6 +87,11 @@ interface WindowPlacement {
   y: number;
 }
 
+interface WindowFrame extends WindowPlacement {
+  width: number;
+  height: number;
+}
+
 export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
@@ -167,8 +167,12 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
   }
   const window = getCurrentWindow();
   const position = await normalizePetWindowPosition(settings);
-  await window.setSize(new LogicalSize(settings.width, settings.height));
-  await window.setPosition(new LogicalPosition(position.x, position.y));
+  await setPetWindowFrame({
+    x: position.x,
+    y: position.y,
+    width: settings.width,
+    height: settings.height,
+  });
   await window.setAlwaysOnTop(settings.alwaysOnTop);
   await window.setIgnoreCursorEvents(settings.clickThrough);
 }
@@ -214,7 +218,12 @@ export async function setCurrentWindowSize(width: number, height: number): Promi
   if (!isTauriRuntime()) {
     return;
   }
-  await getCurrentWindow().setSize(new LogicalSize(width, height));
+  const frame = await getPetWindowFrame();
+  await setPetWindowFrame({
+    ...frame,
+    width,
+    height,
+  });
 }
 
 export async function setCurrentWindowFrame(
@@ -226,38 +235,34 @@ export async function setCurrentWindowFrame(
   if (!isTauriRuntime()) {
     return;
   }
-  const window = getCurrentWindow();
-  await window.setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
-  await window.setSize(new LogicalSize(width, height));
+  await setPetWindowFrame({
+    x: Math.round(x),
+    y: Math.round(y),
+    width,
+    height,
+  });
 }
 
 export async function captureCurrentWindowPosition(): Promise<{ x: number; y: number } | null> {
   if (!isTauriRuntime()) {
     return null;
   }
-  const position = await getCurrentWindow().outerPosition();
-  return physicalToLogicalPosition(
-    { x: position.x, y: position.y },
-    await currentWindowScaleFactor(),
-  );
+  const frame = await getPetWindowFrame();
+  return { x: frame.x, y: frame.y };
 }
 
 export async function captureCursorPosition(): Promise<{ x: number; y: number } | null> {
   if (!isTauriRuntime()) {
     return null;
   }
-  const position = await cursorPosition();
-  return physicalToLogicalPosition(
-    { x: position.x, y: position.y },
-    await currentWindowScaleFactor(),
-  );
+  return invoke<WindowPlacement | null>("get_cursor_position");
 }
 
 export async function moveCurrentWindowTo(x: number, y: number): Promise<void> {
   if (!isTauriRuntime()) {
     return;
   }
-  await getCurrentWindow().setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
+  await invoke("move_pet_window", { x: Math.round(x), y: Math.round(y) });
 }
 
 export async function currentWindowScaleFactor(): Promise<number> {
@@ -316,6 +321,14 @@ function physicalToLogicalPosition(position: WindowPlacement, scaleFactor: numbe
     x: Math.round(position.x / scaleFactor),
     y: Math.round(position.y / scaleFactor),
   };
+}
+
+async function getPetWindowFrame(): Promise<WindowFrame> {
+  return invoke<WindowFrame>("get_pet_window_frame");
+}
+
+async function setPetWindowFrame(frame: WindowFrame): Promise<void> {
+  await invoke("set_pet_window_frame", { frame });
 }
 
 export function toAssetUrl(path: string): string {
