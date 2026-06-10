@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::env;
 use std::fs;
 use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
@@ -117,6 +118,13 @@ struct LlmChatResponse {
     content: String,
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SettingsBackup {
+    settings: serde_json::Value,
+    path: String,
+}
+
 #[derive(Debug, Serialize)]
 struct ChatCompletionPayload {
     model: String,
@@ -212,6 +220,29 @@ fn apply_pet_window_settings<R: Runtime>(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+fn read_settings_backup(app: AppHandle) -> Result<Option<SettingsBackup>, String> {
+    for path in settings_backup_candidates(&app) {
+        if let Some(settings) = read_settings_from_file(&path) {
+            return Ok(Some(SettingsBackup {
+                settings,
+                path: path.to_string_lossy().to_string(),
+            }));
+        }
+    }
+
+    Ok(None)
+}
+
+#[tauri::command]
+fn write_settings_backup(app: AppHandle, settings: serde_json::Value) -> Result<(), String> {
+    let app_data_dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
+    let path = app_data_dir.join("settings.backup.json");
+    let content = serde_json::to_string_pretty(&settings).map_err(|error| error.to_string())?;
+    fs::write(path, content).map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -385,6 +416,8 @@ pub fn run() {
             validate_pet_package,
             show_settings_window,
             apply_pet_window_settings,
+            read_settings_backup,
+            write_settings_backup,
             reveal_pet_folder,
             import_pet_from_url,
             send_llm_chat,
@@ -471,6 +504,117 @@ fn ensure_settings_window<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewWindo
     .visible(false)
     .build()
     .map_err(|error| error.to_string())
+}
+
+fn settings_backup_candidates(app: &AppHandle) -> Vec<PathBuf> {
+    let mut directories = Vec::new();
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        directories.push(app_data_dir);
+    }
+
+    let directory_names = [
+        "top.nether.pet",
+        "Desktop Pet Launcher",
+        "desktop-pet-launcher",
+        "nether-pet-launcher",
+        "dev.codex.desktop-pet-launcher",
+        "dev.codex",
+    ];
+
+    for base in platform_settings_bases() {
+        for name in directory_names {
+            directories.push(base.join(name));
+        }
+    }
+
+    let file_names = ["settings.backup.json", "settings.json"];
+    let mut seen = HashSet::new();
+    let mut paths = Vec::new();
+    for directory in directories {
+        for file_name in file_names {
+            let path = directory.join(file_name);
+            let key = path.to_string_lossy().to_lowercase();
+            if seen.insert(key) {
+                paths.push(path);
+            }
+        }
+    }
+
+    paths
+}
+
+fn platform_settings_bases() -> Vec<PathBuf> {
+    let mut bases = Vec::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(path) = env::var_os("APPDATA") {
+            bases.push(PathBuf::from(path));
+        }
+        if let Some(path) = env::var_os("LOCALAPPDATA") {
+            bases.push(PathBuf::from(path));
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        if let Some(home) = env::var_os("HOME") {
+            bases.push(PathBuf::from(home).join("Library").join("Application Support"));
+        }
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if let Some(path) = env::var_os("XDG_CONFIG_HOME") {
+            bases.push(PathBuf::from(path));
+        } else if let Some(home) = env::var_os("HOME") {
+            bases.push(PathBuf::from(home).join(".config"));
+        }
+
+        if let Some(path) = env::var_os("XDG_DATA_HOME") {
+            bases.push(PathBuf::from(path));
+        } else if let Some(home) = env::var_os("HOME") {
+            bases.push(PathBuf::from(home).join(".local").join("share"));
+        }
+    }
+
+    bases
+}
+
+fn read_settings_from_file(path: &Path) -> Option<serde_json::Value> {
+    let content = fs::read_to_string(path).ok()?;
+    let value = serde_json::from_str::<serde_json::Value>(&content).ok()?;
+    extract_settings_value(value)
+}
+
+fn extract_settings_value(value: serde_json::Value) -> Option<serde_json::Value> {
+    if is_settings_object(&value) {
+        return Some(value);
+    }
+
+    let app_settings = value.get("appSettings")?;
+    if is_settings_object(app_settings) {
+        return Some(app_settings.clone());
+    }
+
+    let nested_value = app_settings.get("value")?;
+    if is_settings_object(nested_value) {
+        return Some(nested_value.clone());
+    }
+
+    None
+}
+
+fn is_settings_object(value: &serde_json::Value) -> bool {
+    let Some(object) = value.as_object() else {
+        return false;
+    };
+
+    object.contains_key("width")
+        || object.contains_key("height")
+        || object.contains_key("x")
+        || object.contains_key("y")
+        || object.contains_key("activePetId")
 }
 
 fn toggle_pet_window<R: Runtime>(app: &AppHandle<R>) {

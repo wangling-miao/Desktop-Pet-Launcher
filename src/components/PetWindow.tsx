@@ -21,13 +21,16 @@ import { DEFAULT_SETTINGS, loadSettings, saveSettings, type AppSettings } from "
 import {
   applyPetWindowSettings,
   captureCurrentWindowPosition,
+  captureCursorPosition,
   currentWindowScaleFactor,
   currentWindowWorkArea,
   isTauriRuntime,
   listPetPackages,
   moveCurrentWindowTo,
   notifyPetSettings,
+  restoreAutostartPreference,
   sendLlmChat,
+  setCurrentWindowClickThrough,
   setCurrentWindowGeometry,
   setCurrentWindowFrame,
   setCurrentWindowSize,
@@ -40,9 +43,20 @@ import { usePetAnimation } from "../lib/usePetAnimation";
 type ChatPhase = "idle" | "editing" | "thinking" | "answer" | "error";
 type ChatSide = "left" | "right";
 
+const CHAT_BUTTON_SIZE = 34;
+const CHAT_BUTTON_INSET = 2;
+const CHAT_HOTSPOT_PADDING = 14;
+
 interface WindowOffset {
   x: number;
   y: number;
+}
+
+interface LogicalRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 interface PetPalette {
@@ -75,6 +89,7 @@ export function PetWindow() {
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const petAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const windowOffsetRef = useRef<WindowOffset>({ x: 0, y: 0 });
+  const chatHotspotActiveRef = useRef(false);
   const dragRef = useRef<{
     pointerId: number;
     startScreenX: number;
@@ -102,13 +117,20 @@ export function PetWindow() {
     let cancelled = false;
     async function boot() {
       const loadedSettings = await loadSettings();
+      const autostart = await restoreAutostartPreference(loadedSettings.autostart);
       const foundPackages = await refreshPackages(loadedSettings.petFolders);
       if (cancelled) {
         return;
       }
       const activePetId = loadedSettings.activePetId ?? foundPackages[0]?.id ?? null;
-      const nextSettings = { ...loadedSettings, activePetId };
+      const nextSettings = { ...loadedSettings, autostart, activePetId };
       setSettings(nextSettings);
+      if (
+        nextSettings.autostart !== loadedSettings.autostart ||
+        nextSettings.activePetId !== loadedSettings.activePetId
+      ) {
+        await saveSettings(nextSettings);
+      }
       await setCurrentWindowGeometry(nextSettings);
       setReady(true);
     }
@@ -193,6 +215,29 @@ export function PetWindow() {
     () => getTargetRenderSize(chatExpanded),
     [chatExpanded, chatGap, chatPanelWidth, settings.height, settings.width],
   );
+  const chatInteractiveRects = useMemo(
+    () =>
+      getChatInteractiveRects({
+        chatExpanded,
+        chatGap,
+        chatPanelWidth,
+        chatSide,
+        petHeight: settings.height,
+        petOffsetY,
+        petWidth: settings.width,
+        renderHeight: renderSize.height,
+      }),
+    [
+      chatExpanded,
+      chatGap,
+      chatPanelWidth,
+      chatSide,
+      petOffsetY,
+      renderSize.height,
+      settings.height,
+      settings.width,
+    ],
+  );
   const conversationState = useMemo(
     () =>
       settings.llmChatEnabled && chatOpen
@@ -247,6 +292,52 @@ export function PetWindow() {
     // Window framing depends on saved settings and chat layout state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatOpen, chatPanelWidth, chatSide, ready, settings.height, settings.width]);
+
+  useEffect(() => {
+    let stopped = false;
+    let timer = 0;
+
+    async function applyHotspotState(interactive: boolean) {
+      if (stopped || chatHotspotActiveRef.current === interactive) {
+        return;
+      }
+      chatHotspotActiveRef.current = interactive;
+      await setCurrentWindowClickThrough(!interactive);
+    }
+
+    async function updateHotspotState() {
+      const interactive = await isCursorInsideChatHotspot(chatInteractiveRects);
+      await applyHotspotState(interactive);
+    }
+
+    if (!ready || !settings.clickThrough) {
+      chatHotspotActiveRef.current = false;
+      void setCurrentWindowClickThrough(false);
+      return () => {
+        stopped = true;
+      };
+    }
+
+    if (!settings.llmChatEnabled) {
+      chatHotspotActiveRef.current = false;
+      void setCurrentWindowClickThrough(true);
+      return () => {
+        stopped = true;
+      };
+    }
+
+    void updateHotspotState();
+    timer = window.setInterval(() => {
+      void updateHotspotState();
+    }, 90);
+
+    return () => {
+      stopped = true;
+      if (timer) {
+        window.clearInterval(timer);
+      }
+    };
+  }, [chatInteractiveRects, ready, settings.clickThrough, settings.llmChatEnabled]);
 
   useEffect(() => {
     if (!ready || !settings.llmChatEnabled || chatOpen) {
@@ -740,6 +831,84 @@ function getSpriteFrameTransform(
   const jumpArc = [0, -0.08, -0.16, -0.1, 0];
   const offset = Math.round(height * (jumpArc[frame] ?? 0));
   return `translateY(${offset}px)`;
+}
+
+function getChatInteractiveRects({
+  chatExpanded,
+  chatGap,
+  chatPanelWidth,
+  chatSide,
+  petHeight,
+  petOffsetY,
+  petWidth,
+  renderHeight,
+}: {
+  chatExpanded: boolean;
+  chatGap: number;
+  chatPanelWidth: number;
+  chatSide: ChatSide;
+  petHeight: number;
+  petOffsetY: number;
+  petWidth: number;
+  renderHeight: number;
+}): LogicalRect[] {
+  const stageX = chatExpanded && chatSide === "left" ? chatPanelWidth + chatGap : 0;
+  const buttonX =
+    stageX +
+    (chatSide === "left"
+      ? CHAT_BUTTON_INSET
+      : petWidth - CHAT_BUTTON_SIZE - CHAT_BUTTON_INSET);
+  const buttonY = petOffsetY + petHeight - CHAT_BUTTON_SIZE - CHAT_BUTTON_INSET;
+  const rects = [
+    padRect(
+      {
+        x: buttonX,
+        y: buttonY,
+        width: CHAT_BUTTON_SIZE,
+        height: CHAT_BUTTON_SIZE,
+      },
+      CHAT_HOTSPOT_PADDING,
+    ),
+  ];
+
+  if (chatExpanded) {
+    rects.push({
+      x: chatSide === "left" ? 0 : petWidth + chatGap,
+      y: 0,
+      width: chatPanelWidth,
+      height: renderHeight,
+    });
+  }
+
+  return rects;
+}
+
+async function isCursorInsideChatHotspot(rects: LogicalRect[]): Promise<boolean> {
+  const [cursor, windowPosition, scaleFactor] = await Promise.all([
+    captureCursorPosition(),
+    captureCurrentWindowPosition(),
+    currentWindowScaleFactor(),
+  ]);
+  if (!cursor || !windowPosition) {
+    return false;
+  }
+
+  return rects.some((rect) => {
+    const left = windowPosition.x + rect.x * scaleFactor;
+    const top = windowPosition.y + rect.y * scaleFactor;
+    const right = left + rect.width * scaleFactor;
+    const bottom = top + rect.height * scaleFactor;
+    return cursor.x >= left && cursor.x <= right && cursor.y >= top && cursor.y <= bottom;
+  });
+}
+
+function padRect(rect: LogicalRect, padding: number): LogicalRect {
+  return {
+    x: rect.x - padding,
+    y: rect.y - padding,
+    width: rect.width + padding * 2,
+    height: rect.height + padding * 2,
+  };
 }
 
 function pickConversationState(

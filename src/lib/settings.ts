@@ -1,4 +1,5 @@
 import { load, type Store } from "@tauri-apps/plugin-store";
+import { readSettingsBackup, writeSettingsBackup } from "./tauriApi";
 import type { PetState } from "./petContract";
 
 export interface AppSettings {
@@ -77,17 +78,25 @@ export async function getSettingsStore(): Promise<Store | null> {
 
 export async function loadSettings(): Promise<AppSettings> {
   const store = await getSettingsStore();
+  const backup = await safeReadSettingsBackup();
   if (!store) {
-    return normalizeSettings(null);
+    return normalizeSettings(mergeSettingsSources(readBrowserSettings(), backup));
   }
   const saved = await store.get<Partial<AppSettings>>("appSettings");
-  return normalizeSettings(saved);
+  const merged = mergeSettingsSources(saved, backup);
+  const normalized = normalizeSettings(merged);
+  if (shouldRepairStoredSettings(saved, backup)) {
+    await saveSettings(normalized);
+  }
+  return normalized;
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
+  localStorage.setItem("desktop-pet-settings", JSON.stringify(settings));
+  await safeWriteSettingsBackup(settings);
+
   const store = await getSettingsStore();
   if (!store) {
-    localStorage.setItem("desktop-pet-settings", JSON.stringify(settings));
     return;
   }
   await store.set("appSettings", settings);
@@ -132,6 +141,67 @@ function readBrowserSettings(): Partial<AppSettings> | null {
   } catch {
     return null;
   }
+}
+
+async function safeReadSettingsBackup(): Promise<Partial<AppSettings> | null> {
+  try {
+    return (await readSettingsBackup())?.settings ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function safeWriteSettingsBackup(settings: AppSettings): Promise<void> {
+  try {
+    await writeSettingsBackup(settings);
+  } catch {
+    // The Tauri store remains the primary source; the mirror is only a recovery path.
+  }
+}
+
+function mergeSettingsSources(
+  primary?: Partial<AppSettings> | null,
+  fallback?: Partial<AppSettings> | null,
+): Partial<AppSettings> | null {
+  if (!primary && !fallback) {
+    return null;
+  }
+  if (!primary) {
+    return fallback ?? null;
+  }
+  if (!fallback) {
+    return primary;
+  }
+
+  const merged: Partial<AppSettings> = { ...fallback, ...primary };
+  if (!isFiniteNumber(primary.x) && isFiniteNumber(fallback.x)) {
+    merged.x = fallback.x;
+  }
+  if (!isFiniteNumber(primary.y) && isFiniteNumber(fallback.y)) {
+    merged.y = fallback.y;
+  }
+
+  return merged;
+}
+
+function shouldRepairStoredSettings(
+  saved?: Partial<AppSettings> | null,
+  backup?: Partial<AppSettings> | null,
+): boolean {
+  if (!backup) {
+    return false;
+  }
+  if (!saved) {
+    return true;
+  }
+  return (
+    (!isFiniteNumber(saved.x) && isFiniteNumber(backup.x)) ||
+    (!isFiniteNumber(saved.y) && isFiniteNumber(backup.y))
+  );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
 }
 
 function clampNumber(value: unknown, min: number, max: number, fallback: number): number {

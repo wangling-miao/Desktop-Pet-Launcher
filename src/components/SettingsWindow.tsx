@@ -40,8 +40,8 @@ import {
   importPetFromUrl,
   listPetPackages,
   notifyPetSettings,
-  readAutostart,
   revealPetFolder,
+  restoreAutostartPreference,
   writeAutostart,
   type GalleryIndex,
   type GalleryPet,
@@ -116,18 +116,23 @@ export function SettingsWindow() {
     let cancelled = false;
     async function boot() {
       const loadedSettings = await loadSettings();
-      const [foundPackages, autostart] = await Promise.all([
-        refreshPackages(loadedSettings.petFolders),
-        readAutostart(),
-      ]);
+      const foundPackages = await refreshPackages(loadedSettings.petFolders);
+      const autostart = await restoreAutostartPreference(loadedSettings.autostart);
       if (cancelled) {
         return;
       }
-      setSettings({
+      const nextSettings = {
         ...loadedSettings,
         autostart,
         activePetId: loadedSettings.activePetId ?? foundPackages[0]?.id ?? null,
-      });
+      };
+      setSettings(nextSettings);
+      if (
+        nextSettings.autostart !== loadedSettings.autostart ||
+        nextSettings.activePetId !== loadedSettings.activePetId
+      ) {
+        void saveSettings(nextSettings);
+      }
       setGalleryUrlDraft(loadedSettings.galleryIndexUrl);
       void loadGallery(loadedSettings.galleryIndexUrl, false);
       void checkUpdates(false);
@@ -295,6 +300,13 @@ export function SettingsWindow() {
     }
   }
 
+  async function toggleDragging(enabled: boolean) {
+    await commit(
+      { ...settings, dragEnabled: enabled, locked: !enabled },
+      enabled ? "已允许拖动桌宠" : "已固定当前位置",
+    );
+  }
+
   async function checkUpdates(manual = true) {
     setUpdateCheck((current) => ({
       ...current,
@@ -314,7 +326,7 @@ export function SettingsWindow() {
       setUpdateCheck((current) => ({
         ...current,
         status: "error",
-        message: "检查失败，请稍后再试",
+        message: "暂时没有检查到版本信息，请稍后再试。",
       }));
       if (manual) {
         setStatus("更新检查失败，请检查网络");
@@ -770,14 +782,9 @@ export function SettingsWindow() {
               onChange={(value) => update("alwaysOnTop", value, "置顶已更新")}
             />
             <ToggleRow
-              label="允许拖动"
-              value={settings.dragEnabled}
-              onChange={(value) => update("dragEnabled", value, "拖动已更新")}
-            />
-            <ToggleRow
-              label="锁定桌宠"
-              value={settings.locked}
-              onChange={(value) => update("locked", value, "锁定已更新")}
+              label="允许拖动桌宠"
+              value={settings.dragEnabled && !settings.locked}
+              onChange={toggleDragging}
             />
             <ToggleRow
               label="鼠标穿透"
@@ -873,7 +880,7 @@ function createUpdateCheckState(result: UpdateCheckResult): UpdateCheckState {
       currentVersion: result.currentVersion,
       latestVersion: result.latestVersion,
       releaseUrl: result.releaseUrl,
-      message: "有新版本可用，可到发布页下载。不会自动安装，也不会弹窗打扰。",
+      message: "新版已经发布，点下面的「发布页」下载安装包。",
     };
   }
 
@@ -882,7 +889,7 @@ function createUpdateCheckState(result: UpdateCheckResult): UpdateCheckState {
     currentVersion: result.currentVersion,
     latestVersion: result.latestVersion,
     releaseUrl: result.releaseUrl,
-    message: "当前安装的版本已经是最新版本。",
+    message: "你正在使用最新版本。",
   };
 }
 

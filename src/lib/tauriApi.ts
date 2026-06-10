@@ -3,6 +3,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import {
   LogicalSize,
   PhysicalPosition,
+  cursorPosition,
   currentMonitor,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
@@ -70,6 +71,11 @@ export interface UpdateCheckResult {
   updateAvailable: boolean;
   releaseUrl: string;
   releaseName?: string;
+}
+
+export interface SettingsBackupResult {
+  settings: Partial<AppSettings>;
+  path: string;
 }
 
 export interface MonitorWorkArea {
@@ -162,6 +168,13 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
   await window.setIgnoreCursorEvents(settings.clickThrough);
 }
 
+export async function setCurrentWindowClickThrough(enabled: boolean): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().setIgnoreCursorEvents(enabled);
+}
+
 export async function setCurrentWindowSize(width: number, height: number): Promise<void> {
   if (!isTauriRuntime()) {
     return;
@@ -188,6 +201,14 @@ export async function captureCurrentWindowPosition(): Promise<{ x: number; y: nu
     return null;
   }
   const position = await getCurrentWindow().outerPosition();
+  return { x: position.x, y: position.y };
+}
+
+export async function captureCursorPosition(): Promise<{ x: number; y: number } | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+  const position = await cursorPosition();
   return { x: position.x, y: position.y };
 }
 
@@ -251,6 +272,39 @@ export async function writeAutostart(enabled: boolean): Promise<void> {
   } else {
     await disable();
   }
+}
+
+export async function restoreAutostartPreference(preferred: boolean): Promise<boolean> {
+  if (!isTauriRuntime()) {
+    return preferred;
+  }
+
+  try {
+    const enabled = await readAutostart();
+    if (preferred && !enabled) {
+      await writeAutostart(true);
+      return true;
+    }
+    return enabled;
+  } catch {
+    return preferred;
+  }
+}
+
+export async function readSettingsBackup(): Promise<SettingsBackupResult | null> {
+  if (!isTauriRuntime()) {
+    return null;
+  }
+
+  return invoke<SettingsBackupResult | null>("read_settings_backup");
+}
+
+export async function writeSettingsBackup(settings: AppSettings): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+
+  await invoke("write_settings_backup", { settings });
 }
 
 export async function readAppVersion(): Promise<string> {
