@@ -9,6 +9,7 @@
   "license": "Fan-art sample, redistribution requires rights review",
   "preview": "preview.gif",
   "previewImage": "preview.png",
+  "previewWebp": "preview.webp",
   "format": "hatch-pet-compatible",
   "resolution": "1x",
   "createdAt": "2026-06-10",

@@ -115,7 +115,7 @@ async function loadGallery() {
 }
 
 function renderPetCard(pet, baseUrl) {
-  const preview = absoluteGalleryUrl(pet.preview || pet.previewImage, baseUrl);
+  const preview = absoluteGalleryUrl(pet.previewWebp || pet.previewImage || pet.preview, baseUrl);
   const download = absoluteGalleryUrl(pet.download, baseUrl);
   const tags = (pet.tags ?? []).map((tag) => `<span>${escapeHtml(tag)}</span>`).join("");
   const size = pet.downloadSize ? ` · ${formatBytes(pet.downloadSize)}` : "";

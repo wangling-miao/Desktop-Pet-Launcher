@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-10T00:39:54.519Z",
+  "generatedAt": "2026-06-10T00:44:14.658Z",
   "repository": "https://github.com/wangling-miao/awesome-desktop-pets",
   "pets": [
     {
@@ -18,10 +18,11 @@
       "license": "Fan-art sample, redistribution requires rights review",
       "preview": "pets/venti-bard/preview.gif",
       "previewImage": "pets/venti-bard/preview.png",
+      "previewWebp": "pets/venti-bard/preview.webp",
       "manifest": "pets/venti-bard/pet.json",
       "download": "downloads/venti-bard-v1.0.0.zip",
-      "downloadSize": 2153925,
-      "downloadSha256": "a807a3f15d87f515f67c6ab78099664e770c603a1f38179c581b1d23d9b8fd03",
+      "downloadSize": 2356296,
+      "downloadSha256": "c0a727b5db6b280e28be1cf43341260d0dd8d51f8e5cd638c3a4b93d6909129f",
       "format": "hatch-pet-compatible",
       "resolution": "1x",
       "createdAt": "2026-06-10"
