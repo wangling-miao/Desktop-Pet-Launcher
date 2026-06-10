@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "website/**"
-      - ".github/workflows/pages.yml"
+    tags:
+      - "V*"
   workflow_dispatch:
 
 permissions:
@@ -30,6 +29,71 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+
+      - name: Generate update manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const fs = require("fs");
+
+          const repository = process.env.REPOSITORY;
+          const refName = process.env.REF_NAME;
+          const refType = process.env.REF_TYPE;
+          const token = process.env.GITHUB_TOKEN;
+          const latestReleaseUrl = `https://github.com/${repository}/releases/latest`;
+
+          async function latestFromApi() {
+            const response = await fetch(`https://api.github.com/repos/${repository}/releases/latest`, {
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${token}`,
+                "User-Agent": "desktop-pet-launcher-pages",
+              },
+            });
+            if (!response.ok) {
+              throw new Error(`GitHub Release HTTP ${response.status}`);
+            }
+            const release = await response.json();
+            return {
+              version: release.tag_name,
+              name: release.name || `Desktop Pet Launcher ${release.tag_name}`,
+              releaseUrl: release.html_url || latestReleaseUrl,
+            };
+          }
+
+          async function main() {
+            let manifest;
+            if (refType === "tag" && /^V/.test(refName)) {
+              manifest = {
+                version: refName,
+                name: `Desktop Pet Launcher ${refName}`,
+                releaseUrl: `https://github.com/${repository}/releases/tag/${refName}`,
+              };
+            } else {
+              try {
+                manifest = await latestFromApi();
+              } catch {
+                const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+                manifest = {
+                  version: `V${pkg.version}`,
+                  name: `Desktop Pet Launcher V${pkg.version}`,
+                  releaseUrl: latestReleaseUrl,
+                };
+              }
+            }
+
+            fs.writeFileSync("website/latest.json", `${JSON.stringify(manifest, null, 2)}\n`);
+          }
+
+          main().catch((error) => {
+            console.error(error);
+            process.exit(1);
+          });
+          NODE
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3

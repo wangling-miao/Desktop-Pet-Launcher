@@ -12,6 +12,7 @@ import packageInfo from "../../package.json";
 import type { AppSettings } from "./settings";
 import type { PetPackage } from "./petContract";
 
+const UPDATE_MANIFEST_URL = "https://pet.nether.top/latest.json";
 const LATEST_RELEASE_API_URL =
   "https://api.github.com/repos/wangling-miao/Desktop-Pet-Launcher/releases/latest";
 export const APP_LATEST_RELEASE_URL =
@@ -70,6 +71,7 @@ export interface UpdateCheckResult {
   updateAvailable: boolean;
   releaseUrl: string;
   releaseName?: string;
+  checked: boolean;
 }
 
 export interface SettingsBackupResult {
@@ -172,7 +174,7 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
 }
 
 export async function normalizePetWindowPosition(
-  settings: Pick<AppSettings, "height" | "width" | "x" | "y">,
+  settings: Pick<AppSettings, "height" | "positionCoordinateSpace" | "width" | "x" | "y">,
 ): Promise<WindowPlacement> {
   const fallback = { x: 80, y: 80 };
   const requested = {
@@ -185,7 +187,10 @@ export async function normalizePetWindowPosition(
 
   const scaleFactor = await currentWindowScaleFactor();
   const workArea = browserWorkArea();
-  const migrated = migrateSavedPositionToLogical(requested, workArea, scaleFactor);
+  const migrated =
+    settings.positionCoordinateSpace === "logical"
+      ? requested
+      : migrateLegacySavedPositionToLogical(requested, scaleFactor);
   const margin = 8;
   const minX = workArea.x + margin;
   const minY = workArea.y + margin;
@@ -231,7 +236,10 @@ export async function captureCurrentWindowPosition(): Promise<{ x: number; y: nu
     return null;
   }
   const position = await getCurrentWindow().outerPosition();
-  return toLogicalPosition({ x: position.x, y: position.y }, await currentWindowScaleFactor());
+  return physicalToLogicalPosition(
+    { x: position.x, y: position.y },
+    await currentWindowScaleFactor(),
+  );
 }
 
 export async function captureCursorPosition(): Promise<{ x: number; y: number } | null> {
@@ -239,7 +247,10 @@ export async function captureCursorPosition(): Promise<{ x: number; y: number } 
     return null;
   }
   const position = await cursorPosition();
-  return toLogicalPosition({ x: position.x, y: position.y }, await currentWindowScaleFactor());
+  return physicalToLogicalPosition(
+    { x: position.x, y: position.y },
+    await currentWindowScaleFactor(),
+  );
 }
 
 export async function moveCurrentWindowTo(x: number, y: number): Promise<void> {
@@ -278,34 +289,22 @@ function browserWorkArea(): Omit<MonitorWorkArea, "scaleFactor"> {
   };
 }
 
-function migrateSavedPositionToLogical(
+function migrateLegacySavedPositionToLogical(
   position: WindowPlacement,
-  workArea: Omit<MonitorWorkArea, "scaleFactor">,
   scaleFactor: number,
 ): WindowPlacement {
   if (scaleFactor <= 1) {
     return position;
   }
 
-  const outsideLogical =
-    position.x > workArea.x + workArea.width ||
-    position.y > workArea.y + workArea.height ||
-    position.x < workArea.x - workArea.width ||
-    position.y < workArea.y - workArea.height;
-  const scaled = {
-    x: Math.round(position.x / scaleFactor),
-    y: Math.round(position.y / scaleFactor),
-  };
-  const scaledInsideLogical =
-    scaled.x >= workArea.x - 64 &&
-    scaled.x <= workArea.x + workArea.width + 64 &&
-    scaled.y >= workArea.y - 64 &&
-    scaled.y <= workArea.y + workArea.height + 64;
+  if (position.x === 80 && position.y === 80) {
+    return position;
+  }
 
-  return outsideLogical && scaledInsideLogical ? scaled : position;
+  return physicalToLogicalPosition(position, scaleFactor);
 }
 
-function toLogicalPosition(position: WindowPlacement, scaleFactor: number): WindowPlacement {
+function physicalToLogicalPosition(position: WindowPlacement, scaleFactor: number): WindowPlacement {
   if (scaleFactor <= 1) {
     return {
       x: Math.round(position.x),
@@ -313,15 +312,10 @@ function toLogicalPosition(position: WindowPlacement, scaleFactor: number): Wind
     };
   }
 
-  const workArea = browserWorkArea();
-  return migrateSavedPositionToLogical(
-    {
-      x: Math.round(position.x),
-      y: Math.round(position.y),
-    },
-    workArea,
-    scaleFactor,
-  );
+  return {
+    x: Math.round(position.x / scaleFactor),
+    y: Math.round(position.y / scaleFactor),
+  };
 }
 
 export function toAssetUrl(path: string): string {
@@ -392,34 +386,63 @@ export async function readAppVersion(): Promise<string> {
 }
 
 export async function checkForAppUpdate(): Promise<UpdateCheckResult> {
-  const [currentVersion, response] = await Promise.all([
-    readAppVersion(),
-    fetch(LATEST_RELEASE_API_URL, {
-      cache: "no-store",
-      headers: {
-        Accept: "application/vnd.github+json",
-      },
-    }),
-  ]);
-
-  if (!response.ok) {
-    throw new Error(`GitHub Release HTTP ${response.status}`);
+  const currentVersion = normalizeVersion(await readAppVersion());
+  const latest = await fetchUpdateManifest();
+  if (!latest) {
+    return {
+      currentVersion,
+      latestVersion: "",
+      updateAvailable: false,
+      releaseUrl: APP_LATEST_RELEASE_URL,
+      checked: false,
+    };
   }
-
-  const latest = (await response.json()) as {
-    tag_name?: string;
-    name?: string;
-    html_url?: string;
-  };
-  const latestVersion = normalizeVersion(latest.tag_name ?? "");
+  const latestVersion = normalizeVersion(latest.version ?? latest.tag_name ?? "");
 
   return {
-    currentVersion: normalizeVersion(currentVersion),
+    currentVersion,
     latestVersion,
-    updateAvailable: compareVersions(latestVersion, currentVersion) > 0,
-    releaseUrl: latest.html_url ?? APP_LATEST_RELEASE_URL,
+    updateAvailable: latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false,
+    releaseUrl: latest.releaseUrl ?? latest.html_url ?? APP_LATEST_RELEASE_URL,
     releaseName: latest.name,
+    checked: Boolean(latestVersion),
   };
+}
+
+async function fetchUpdateManifest(): Promise<{
+  version?: string;
+  tag_name?: string;
+  name?: string;
+  html_url?: string;
+  releaseUrl?: string;
+} | null> {
+  const manifest = await fetchJson(UPDATE_MANIFEST_URL);
+  if (manifest) {
+    return manifest;
+  }
+
+  return fetchJson(LATEST_RELEASE_API_URL, {
+    Accept: "application/vnd.github+json",
+  });
+}
+
+async function fetchJson(
+  url: string,
+  headers: Record<string, string> = {},
+): Promise<Record<string, string> | null> {
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      headers,
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = await response.json();
+    return payload && typeof payload === "object" ? (payload as Record<string, string>) : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function sendLlmChat(request: LlmChatRequest): Promise<LlmChatResponse> {

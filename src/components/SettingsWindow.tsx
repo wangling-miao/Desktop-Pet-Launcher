@@ -187,7 +187,7 @@ export function SettingsWindow() {
   }
 
   async function setPosition(x: number, y: number) {
-    const next = { ...settings, x, y };
+    const next = { ...settings, x, y, positionCoordinateSpace: "logical" as const };
     await commit(next, "位置已更新", { x, y });
   }
 
@@ -326,7 +326,7 @@ export function SettingsWindow() {
       setUpdateCheck((current) => ({
         ...current,
         status: "error",
-        message: "暂时没有检查到版本信息，请稍后再试。",
+        message: "自动检查没有拿到版本号，可以直接打开发布页查看最新版。",
       }));
       if (manual) {
         setStatus("更新检查失败，请检查网络");
@@ -874,6 +874,16 @@ interface NumberFieldProps {
 }
 
 function createUpdateCheckState(result: UpdateCheckResult): UpdateCheckState {
+  if (!result.checked) {
+    return {
+      status: "error",
+      currentVersion: result.currentVersion,
+      latestVersion: "",
+      releaseUrl: result.releaseUrl,
+      message: "自动检查没有拿到版本号，可以直接打开发布页查看最新版。",
+    };
+  }
+
   if (result.updateAvailable) {
     return {
       status: "available",

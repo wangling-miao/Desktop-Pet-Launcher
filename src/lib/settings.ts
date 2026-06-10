@@ -2,12 +2,15 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 import { readSettingsBackup, writeSettingsBackup } from "./tauriApi";
 import type { PetState } from "./petContract";
 
+export type PositionCoordinateSpace = "logical";
+
 export interface AppSettings {
   activePetId: string | null;
   width: number;
   height: number;
   x: number | null;
   y: number | null;
+  positionCoordinateSpace?: PositionCoordinateSpace;
   alwaysOnTop: boolean;
   dragEnabled: boolean;
   locked: boolean;
@@ -113,6 +116,8 @@ export function normalizeSettings(saved?: Partial<AppSettings> | null): AppSetti
     height: clampNumber(merged.height, 104, 1300, DEFAULT_SETTINGS.height),
     x: nullableNumber(merged.x),
     y: nullableNumber(merged.y),
+    positionCoordinateSpace:
+      merged.positionCoordinateSpace === "logical" ? "logical" : undefined,
     animationSpeed: clampNumber(merged.animationSpeed, 0.25, 3, 1),
     manualState: merged.manualState,
     idleVariety: Boolean(merged.idleVariety),

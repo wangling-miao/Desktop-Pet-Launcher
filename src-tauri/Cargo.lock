@@ -806,7 +806,7 @@ dependencies = [
 
 [[package]]
 name = "desktop-pet-launcher"
-version = "0.2.8"
+version = "0.2.9"
 dependencies = [
  "reqwest 0.12.28",
  "serde",

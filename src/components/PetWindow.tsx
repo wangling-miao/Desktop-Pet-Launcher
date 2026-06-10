@@ -132,8 +132,16 @@ export function PetWindow() {
       }
       await setCurrentWindowGeometry(nextSettings);
       const appliedAnchor = await captureCurrentPetAnchor();
-      if (appliedAnchor && hasPositionChanged(nextSettings, appliedAnchor)) {
-        const normalizedSettings = { ...nextSettings, ...appliedAnchor };
+      if (
+        appliedAnchor &&
+        (hasPositionChanged(nextSettings, appliedAnchor) ||
+          nextSettings.positionCoordinateSpace !== "logical")
+      ) {
+        const normalizedSettings = {
+          ...nextSettings,
+          ...appliedAnchor,
+          positionCoordinateSpace: "logical" as const,
+        };
         settingsRef.current = normalizedSettings;
         setSettings(normalizedSettings);
         await saveSettings(normalizedSettings);
@@ -644,7 +652,7 @@ export function PetWindow() {
       return;
     }
 
-    const next = { ...current, ...petAnchor };
+    const next = { ...current, ...petAnchor, positionCoordinateSpace: "logical" as const };
     petAnchorRef.current = petAnchor;
     settingsRef.current = next;
     setSettings(next);
@@ -722,7 +730,7 @@ export function PetWindow() {
       y: position.y + drag.windowOffsetY,
     };
     petAnchorRef.current = petAnchor;
-    const next = { ...settings, ...petAnchor };
+    const next = { ...settings, ...petAnchor, positionCoordinateSpace: "logical" as const };
     setSettings(next);
     await saveSettings(next);
     await notifyPetSettings(next);
