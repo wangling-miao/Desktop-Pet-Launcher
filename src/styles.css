@@ -36,13 +36,17 @@ button {
 
 .pet-shell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: flex-start;
   gap: 12px;
   background: transparent;
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
+}
+
+.pet-shell.chat-left {
+  flex-direction: row-reverse;
 }
 
 .pet-stage {
@@ -87,6 +91,11 @@ button {
   box-shadow: 0 10px 26px rgba(23, 22, 21, 0.18);
 }
 
+.pet-shell.chat-left .pet-chat-toggle {
+  right: auto;
+  left: 2px;
+}
+
 .pet-chat-toggle:hover,
 .pet-chat-toggle.is-open {
   color: #fffaf2;
@@ -122,6 +131,14 @@ button {
   border-left: 1px solid color-mix(in srgb, var(--pet-accent, #5da996) 54%, rgba(23, 22, 21, 0.16));
   content: "";
   transform: translateX(-20px) rotate(45deg);
+}
+
+.pet-shell.chat-left .pet-chat-bubble::before {
+  right: 0;
+  left: auto;
+  border-right: 1px solid color-mix(in srgb, var(--pet-accent, #5da996) 54%, rgba(23, 22, 21, 0.16));
+  border-left: 0;
+  transform: translateX(20px) rotate(45deg);
 }
 
 .pet-chat-header {

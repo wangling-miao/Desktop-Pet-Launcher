@@ -22,12 +22,14 @@ import {
   applyPetWindowSettings,
   captureCurrentWindowPosition,
   currentWindowScaleFactor,
+  currentWindowWorkArea,
   isTauriRuntime,
   listPetPackages,
   moveCurrentWindowTo,
   notifyPetSettings,
   sendLlmChat,
   setCurrentWindowGeometry,
+  setCurrentWindowFrame,
   setCurrentWindowSize,
   showSettingsWindow,
   toAssetUrl,
@@ -36,6 +38,7 @@ import {
 import { usePetAnimation } from "../lib/usePetAnimation";
 
 type ChatPhase = "idle" | "editing" | "thinking" | "answer" | "error";
+type ChatSide = "left" | "right";
 
 interface PetPalette {
   accent: string;
@@ -60,15 +63,18 @@ export function PetWindow() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatPhase, setChatPhase] = useState<ChatPhase>("idle");
   const [chatError, setChatError] = useState("");
+  const [chatSide, setChatSide] = useState<ChatSide>("right");
   const [palette, setPalette] = useState<PetPalette>(DEFAULT_PALETTE);
   const settingsRef = useRef<AppSettings>(DEFAULT_SETTINGS);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
+  const petAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{
     pointerId: number;
     startScreenX: number;
     startScreenY: number;
     originX: number;
     originY: number;
+    windowOffsetX: number;
     scaleFactor: number;
     moved: boolean;
     lastDirection: "running-left" | "running-right" | null;
@@ -170,12 +176,13 @@ export function PetWindow() {
 
   const chatExpanded = settings.llmChatEnabled && chatOpen;
   const chatPanelWidth = Math.min(360, Math.max(280, Math.round(settings.width * 0.9)));
+  const chatGap = 12;
   const renderSize = useMemo(
     () => ({
-      width: settings.width + (chatExpanded ? chatPanelWidth + 12 : 0),
+      width: settings.width + (chatExpanded ? chatPanelWidth + chatGap : 0),
       height: chatExpanded ? Math.max(settings.height, 330) : settings.height,
     }),
-    [chatExpanded, chatPanelWidth, settings.height, settings.width],
+    [chatExpanded, chatGap, chatPanelWidth, settings.height, settings.width],
   );
   const conversationState = useMemo(
     () =>
@@ -209,18 +216,43 @@ export function PetWindow() {
 
   useEffect(() => {
     if (!settings.llmChatEnabled) {
-      setChatOpen(false);
+      void closeChat();
       setChatPhase("idle");
       setChatError("");
     }
+    // closeChat intentionally reads the latest window position; this effect only responds to the feature toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.llmChatEnabled]);
 
   useEffect(() => {
     if (!ready) {
       return;
     }
-    void setCurrentWindowSize(renderSize.width, renderSize.height);
-  }, [ready, renderSize.height, renderSize.width]);
+    void applyChatWindowFrame(chatOpen, chatSide);
+    // Window framing depends on saved settings and chat layout state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatOpen, chatPanelWidth, chatSide, ready, settings.height, settings.width]);
+
+  useEffect(() => {
+    if (!ready || !settings.llmChatEnabled || chatOpen) {
+      return;
+    }
+
+    let cancelled = false;
+    chooseChatSide()
+      .then((side) => {
+        if (!cancelled) {
+          setChatSide(side);
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+    // This keeps the closed chat button on the side with enough room.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatOpen, ready, settings.height, settings.llmChatEnabled, settings.width, settings.x, settings.y]);
 
   useEffect(() => {
     chatScrollRef.current?.scrollTo({
@@ -292,9 +324,113 @@ export function PetWindow() {
     }
   }
 
-  function openChat() {
+  async function openChat() {
+    const side = await chooseChatSide();
+    const position = await captureCurrentWindowPosition();
+    const anchor = position
+      ? {
+          x: position.x,
+          y: position.y,
+        }
+      : {
+          x: settings.x ?? 80,
+          y: settings.y ?? 80,
+        };
+    petAnchorRef.current = anchor;
+    setChatSide(side);
     setChatOpen(true);
     setChatPhase((current) => (current === "idle" ? "editing" : current));
+    await applyChatWindowFrame(true, side, anchor);
+  }
+
+  async function closeChat() {
+    const anchor = await resolvePetAnchor();
+    setChatOpen(false);
+    petAnchorRef.current = anchor;
+    await setCurrentWindowFrame(settings.width, settings.height, anchor.x, anchor.y);
+  }
+
+  async function chooseChatSide(): Promise<ChatSide> {
+    return chooseChatSideForAnchor();
+  }
+
+  async function chooseChatSideForAnchor(anchor?: { x: number; y: number }): Promise<ChatSide> {
+    const [position, workArea, scaleFactor] = await Promise.all([
+      captureCurrentWindowPosition(),
+      currentWindowWorkArea(),
+      currentWindowScaleFactor(),
+    ]);
+
+    const x =
+      anchor?.x ??
+      (position ? position.x + currentChatWindowOffsetX(scaleFactor) : settings.x ?? 80);
+    if (!workArea) {
+      return "right";
+    }
+
+    const petWidth = settings.width * scaleFactor;
+    const required = (chatPanelWidth + chatGap) * scaleFactor;
+    const leftSpace = x - workArea.x;
+    const rightSpace = workArea.x + workArea.width - (x + petWidth);
+    if (rightSpace >= required) {
+      return "right";
+    }
+    if (leftSpace >= required) {
+      return "left";
+    }
+    return rightSpace >= leftSpace ? "right" : "left";
+  }
+
+  async function resolvePetAnchor(): Promise<{ x: number; y: number }> {
+    if (petAnchorRef.current) {
+      return petAnchorRef.current;
+    }
+
+    const position = await captureCurrentWindowPosition();
+    if (position) {
+      const scaleFactor = await currentWindowScaleFactor();
+      return {
+        x:
+          chatOpen && chatSide === "left"
+            ? position.x + (chatPanelWidth + chatGap) * scaleFactor
+            : position.x,
+        y: position.y,
+      };
+    }
+
+    return {
+      x: settings.x ?? 80,
+      y: settings.y ?? 80,
+    };
+  }
+
+  function currentChatWindowOffsetX(
+    scaleFactor: number,
+    expanded = chatOpen,
+    side = chatSide,
+  ): number {
+    return expanded && side === "left" ? (chatPanelWidth + chatGap) * scaleFactor : 0;
+  }
+
+  async function applyChatWindowFrame(
+    expanded: boolean,
+    side: ChatSide,
+    anchor = petAnchorRef.current,
+  ) {
+    if (!expanded) {
+      if (!anchor) {
+        await setCurrentWindowSize(settings.width, settings.height);
+        return;
+      }
+      await setCurrentWindowFrame(settings.width, settings.height, anchor.x, anchor.y);
+      return;
+    }
+
+    const petAnchor = anchor ?? (await resolvePetAnchor());
+    const scaleFactor = await currentWindowScaleFactor();
+    petAnchorRef.current = petAnchor;
+    const x = petAnchor.x - currentChatWindowOffsetX(scaleFactor, expanded, side);
+    await setCurrentWindowFrame(renderSize.width, renderSize.height, x, petAnchor.y);
   }
 
   async function handlePointerDown(event: PointerEvent<HTMLElement>) {
@@ -310,12 +446,14 @@ export function PetWindow() {
       captureCurrentWindowPosition(),
       currentWindowScaleFactor(),
     ]);
+    const windowOffsetX = currentChatWindowOffsetX(scaleFactor);
     dragRef.current = {
       pointerId: event.pointerId,
       startScreenX: event.screenX,
       startScreenY: event.screenY,
-      originX: position?.x ?? settings.x ?? 80,
+      originX: (position?.x ?? settings.x ?? 80) + windowOffsetX,
       originY: position?.y ?? settings.y ?? 80,
+      windowOffsetX,
       scaleFactor,
       moved: false,
       lastDirection: null,
@@ -338,7 +476,12 @@ export function PetWindow() {
       drag.lastDirection = direction;
       setDragState(direction);
     }
-    await moveCurrentWindowTo(drag.originX + dx, drag.originY + dy);
+    const petAnchor = {
+      x: drag.originX + dx,
+      y: drag.originY + dy,
+    };
+    petAnchorRef.current = petAnchor;
+    await moveCurrentWindowTo(petAnchor.x - drag.windowOffsetX, petAnchor.y);
   }
 
   async function handlePointerUp(event: PointerEvent<HTMLElement>) {
@@ -357,10 +500,20 @@ export function PetWindow() {
       setDragState(null);
       return;
     }
-    const next = { ...settings, ...position };
+    const petAnchor = {
+      x: position.x + drag.windowOffsetX,
+      y: position.y,
+    };
+    petAnchorRef.current = petAnchor;
+    const next = { ...settings, ...petAnchor };
     setSettings(next);
     await saveSettings(next);
     await notifyPetSettings(next);
+    if (chatOpen) {
+      const side = await chooseChatSideForAnchor(petAnchor);
+      setChatSide(side);
+      await applyChatWindowFrame(true, side, petAnchor);
+    }
     window.setTimeout(() => setDragState(null), 900);
   }
 
@@ -378,7 +531,7 @@ export function PetWindow() {
 
   return (
     <main
-      className={`pet-shell ${chatExpanded ? "has-chat" : ""}`}
+      className={`pet-shell ${chatExpanded ? "has-chat" : ""} chat-${chatSide}`}
       style={shellStyle}
       onContextMenu={(event) => event.preventDefault()}
     >
@@ -429,9 +582,9 @@ export function PetWindow() {
             onClick={(event) => {
               event.stopPropagation();
               if (chatOpen) {
-                setChatOpen(false);
+                void closeChat();
               } else {
-                openChat();
+                void openChat();
               }
             }}
           >
@@ -449,7 +602,7 @@ export function PetWindow() {
         >
           <header className="pet-chat-header">
             <span>{activePet?.displayName ?? "桌宠"} 正在听</span>
-            <button type="button" onClick={() => setChatOpen(false)} aria-label="关闭对话">
+            <button type="button" onClick={() => closeChat()} aria-label="关闭对话">
               <X size={15} />
             </button>
           </header>

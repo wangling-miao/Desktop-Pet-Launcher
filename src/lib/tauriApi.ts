@@ -1,5 +1,10 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
-import { LogicalSize, PhysicalPosition, getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  LogicalSize,
+  PhysicalPosition,
+  currentMonitor,
+  getCurrentWindow,
+} from "@tauri-apps/api/window";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { AppSettings } from "./settings";
@@ -50,6 +55,14 @@ export interface LlmChatRequest {
 
 export interface LlmChatResponse {
   content: string;
+}
+
+export interface MonitorWorkArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  scaleFactor: number;
 }
 
 export function isTauriRuntime(): boolean {
@@ -141,6 +154,20 @@ export async function setCurrentWindowSize(width: number, height: number): Promi
   await getCurrentWindow().setSize(new LogicalSize(width, height));
 }
 
+export async function setCurrentWindowFrame(
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  const window = getCurrentWindow();
+  await window.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+  await window.setSize(new LogicalSize(width, height));
+}
+
 export async function captureCurrentWindowPosition(): Promise<{ x: number; y: number } | null> {
   if (!isTauriRuntime()) {
     return null;
@@ -161,6 +188,32 @@ export async function currentWindowScaleFactor(): Promise<number> {
     return window.devicePixelRatio || 1;
   }
   return getCurrentWindow().scaleFactor();
+}
+
+export async function currentWindowWorkArea(): Promise<MonitorWorkArea | null> {
+  if (!isTauriRuntime()) {
+    const screen = window.screen as Screen & { availLeft?: number; availTop?: number };
+    return {
+      x: screen.availLeft ?? 0,
+      y: screen.availTop ?? 0,
+      width: screen.availWidth,
+      height: screen.availHeight,
+      scaleFactor: window.devicePixelRatio || 1,
+    };
+  }
+
+  const monitor = await currentMonitor();
+  if (!monitor) {
+    return null;
+  }
+
+  return {
+    x: monitor.workArea.position.x,
+    y: monitor.workArea.position.y,
+    width: monitor.workArea.size.width,
+    height: monitor.workArea.size.height,
+    scaleFactor: monitor.scaleFactor,
+  };
 }
 
 export function toAssetUrl(path: string): string {
