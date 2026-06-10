@@ -174,9 +174,14 @@ svg {
 
 .ai-chat-preview {
   position: absolute;
-  right: clamp(210px, 22vw, 260px);
-  bottom: 42px;
-  width: min(250px, 44%);
+  right: 28px;
+  bottom: 24px;
+  left: calc(50% + 28px);
+  z-index: 2;
+  width: auto;
+  min-width: 176px;
+  max-width: 220px;
+  padding: 16px;
   color: #f8fff8;
   background:
     linear-gradient(135deg, rgba(99, 208, 173, 0.2), transparent 52%),
@@ -225,6 +230,11 @@ svg {
 .tray-menu strong {
   margin-top: 8px;
   font-size: clamp(20px, 2.1vw, 30px);
+}
+
+.ai-chat-preview strong {
+  font-size: clamp(19px, 1.8vw, 26px);
+  line-height: 1.08;
 }
 
 .settings-panel small {

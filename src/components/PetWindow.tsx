@@ -194,6 +194,12 @@ export function PetWindow() {
   const visualState =
     dragState ?? conversationState ?? (settings.manualState === "idle" ? idleVariant : settings.manualState);
   const frame = usePetAnimation(visualState, settings.animationSpeed, settings.reducedMotion);
+  const spriteFrameTransform = getSpriteFrameTransform(
+    visualState,
+    frame,
+    settings.height,
+    settings.reducedMotion,
+  );
 
   const sprite = useMemo(() => {
     if (!activePet) {
@@ -558,6 +564,7 @@ export function PetWindow() {
               backgroundPosition: `-${frame * settings.width}px -${
                 definition.row * settings.height
               }px`,
+              transform: spriteFrameTransform,
             }}
           />
         ) : (
@@ -666,6 +673,21 @@ export function PetWindow() {
       ) : null}
     </main>
   );
+}
+
+function getSpriteFrameTransform(
+  state: PetState,
+  frame: number,
+  height: number,
+  reducedMotion: boolean,
+): string | undefined {
+  if (reducedMotion || state !== "jumping") {
+    return undefined;
+  }
+
+  const jumpArc = [0, -0.08, -0.16, -0.1, 0];
+  const offset = Math.round(height * (jumpArc[frame] ?? 0));
+  return `translateY(${offset}px)`;
 }
 
 function pickConversationState(

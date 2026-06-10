@@ -64,7 +64,7 @@ button {
 .pet-sprite {
   background-repeat: no-repeat;
   cursor: grab;
-  will-change: background-position;
+  will-change: background-position, transform;
 }
 
 .pet-sprite:active {
