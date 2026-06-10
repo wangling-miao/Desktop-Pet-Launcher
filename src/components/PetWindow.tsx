@@ -22,7 +22,6 @@ import {
   applyPetWindowSettings,
   captureCurrentWindowPosition,
   captureCursorPosition,
-  currentWindowScaleFactor,
   currentWindowWorkArea,
   isTauriRuntime,
   listPetPackages,
@@ -99,7 +98,6 @@ export function PetWindow() {
     originY: number;
     windowOffsetX: number;
     windowOffsetY: number;
-    scaleFactor: number;
     moved: boolean;
     lastDirection: "running-left" | "running-right" | null;
   } | null>(null);
@@ -505,21 +503,20 @@ export function PetWindow() {
   }
 
   async function chooseChatSideForAnchor(anchor?: { x: number; y: number }): Promise<ChatSide> {
-    const [position, workArea, scaleFactor] = await Promise.all([
+    const [position, workArea] = await Promise.all([
       captureCurrentWindowPosition(),
       currentWindowWorkArea(),
-      currentWindowScaleFactor(),
     ]);
 
     const x =
       anchor?.x ??
-      (position ? position.x + currentChatWindowOffsetX(scaleFactor) : settings.x ?? 80);
+      (position ? position.x + currentChatWindowOffsetX() : settings.x ?? 80);
     if (!workArea) {
       return "right";
     }
 
-    const petWidth = settings.width * scaleFactor;
-    const required = (chatPanelWidth + chatGap) * scaleFactor;
+    const petWidth = settings.width;
+    const required = chatPanelWidth + chatGap;
     const leftSpace = x - workArea.x;
     const rightSpace = workArea.x + workArea.width - (x + petWidth);
     if (rightSpace >= required) {
@@ -538,11 +535,10 @@ export function PetWindow() {
 
     const position = await captureCurrentWindowPosition();
     if (position) {
-      const scaleFactor = await currentWindowScaleFactor();
       return {
         x:
           chatOpen && chatSide === "left"
-            ? position.x + (chatPanelWidth + chatGap) * scaleFactor
+            ? position.x + chatPanelWidth + chatGap
             : position.x,
         y: position.y + (chatOpen ? windowOffsetRef.current.y : 0),
       };
@@ -555,38 +551,33 @@ export function PetWindow() {
   }
 
   function currentChatWindowOffsetX(
-    scaleFactor: number,
     expanded = chatOpen,
     side = chatSide,
   ): number {
-    return expanded && side === "left" ? (chatPanelWidth + chatGap) * scaleFactor : 0;
+    return expanded && side === "left" ? chatPanelWidth + chatGap : 0;
   }
 
   async function calculateChatFrameY(
     petAnchorY: number,
-    scaleFactor: number,
     windowHeight: number,
-  ): Promise<{ y: number; offsetPhysical: number; offsetLogical: number }> {
+  ): Promise<{ y: number; offsetLogical: number }> {
     const workArea = await currentWindowWorkArea();
     if (!workArea) {
       return {
         y: petAnchorY,
-        offsetPhysical: 0,
         offsetLogical: 0,
       };
     }
 
-    const margin = 8 * scaleFactor;
-    const windowHeightPhysical = windowHeight * scaleFactor;
+    const margin = 8;
     const minY = workArea.y + margin;
-    const maxY = workArea.y + workArea.height - windowHeightPhysical - margin;
+    const maxY = workArea.y + workArea.height - windowHeight - margin;
     const y = Math.max(minY, Math.min(petAnchorY, Math.max(minY, maxY)));
-    const offsetPhysical = Math.max(0, petAnchorY - y);
+    const offsetLogical = Math.max(0, petAnchorY - y);
 
     return {
       y,
-      offsetPhysical,
-      offsetLogical: offsetPhysical / scaleFactor,
+      offsetLogical,
     };
   }
 
@@ -608,13 +599,12 @@ export function PetWindow() {
 
     const petAnchor = anchor ?? (await resolvePetAnchor());
     const targetRenderSize = getTargetRenderSize(expanded);
-    const scaleFactor = await currentWindowScaleFactor();
-    const yFrame = await calculateChatFrameY(petAnchor.y, scaleFactor, targetRenderSize.height);
-    const offsetX = currentChatWindowOffsetX(scaleFactor, expanded, side);
+    const yFrame = await calculateChatFrameY(petAnchor.y, targetRenderSize.height);
+    const offsetX = currentChatWindowOffsetX(expanded, side);
     petAnchorRef.current = petAnchor;
     windowOffsetRef.current = {
       x: offsetX,
-      y: yFrame.offsetPhysical,
+      y: yFrame.offsetLogical,
     };
     setPetOffsetY(yFrame.offsetLogical);
     const x = petAnchor.x - offsetX;
@@ -671,11 +661,8 @@ export function PetWindow() {
     }
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
-    const [position, scaleFactor] = await Promise.all([
-      captureCurrentWindowPosition(),
-      currentWindowScaleFactor(),
-    ]);
-    const windowOffsetX = currentChatWindowOffsetX(scaleFactor);
+    const position = await captureCurrentWindowPosition();
+    const windowOffsetX = currentChatWindowOffsetX();
     const windowOffsetY = chatOpen ? windowOffsetRef.current.y : 0;
     dragRef.current = {
       pointerId: event.pointerId,
@@ -685,7 +672,6 @@ export function PetWindow() {
       originY: (position?.y ?? settings.y ?? 80) + windowOffsetY,
       windowOffsetX,
       windowOffsetY,
-      scaleFactor,
       moved: false,
       lastDirection: null,
     };
@@ -696,8 +682,8 @@ export function PetWindow() {
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    const dx = (event.screenX - drag.startScreenX) * drag.scaleFactor;
-    const dy = (event.screenY - drag.startScreenY) * drag.scaleFactor;
+    const dx = event.screenX - drag.startScreenX;
+    const dy = event.screenY - drag.startScreenY;
     if (Math.abs(dx) + Math.abs(dy) < 4) {
       return;
     }
@@ -974,20 +960,19 @@ function getChatInteractiveRects({
 }
 
 async function isCursorInsideChatHotspot(rects: LogicalRect[]): Promise<boolean> {
-  const [cursor, windowPosition, scaleFactor] = await Promise.all([
+  const [cursor, windowPosition] = await Promise.all([
     captureCursorPosition(),
     captureCurrentWindowPosition(),
-    currentWindowScaleFactor(),
   ]);
   if (!cursor || !windowPosition) {
     return false;
   }
 
   return rects.some((rect) => {
-    const left = windowPosition.x + rect.x * scaleFactor;
-    const top = windowPosition.y + rect.y * scaleFactor;
-    const right = left + rect.width * scaleFactor;
-    const bottom = top + rect.height * scaleFactor;
+    const left = windowPosition.x + rect.x;
+    const top = windowPosition.y + rect.y;
+    const right = left + rect.width;
+    const bottom = top + rect.height;
     return cursor.x >= left && cursor.x <= right && cursor.y >= top && cursor.y <= bottom;
   });
 }

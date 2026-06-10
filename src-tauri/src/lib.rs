@@ -9,7 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
-    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, Runtime, WebviewUrl, WebviewWindow,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, Runtime, WebviewUrl, WebviewWindow,
     WebviewWindowBuilder,
 };
 
@@ -203,7 +203,7 @@ fn apply_pet_window_settings<R: Runtime>(
 
     if let (Some(x), Some(y)) = (patch.x, patch.y) {
         window
-            .set_position(PhysicalPosition::new(x.round() as i32, y.round() as i32))
+            .set_position(LogicalPosition::new(x, y))
             .map_err(|error| error.to_string())?;
     }
 

@@ -1,11 +1,9 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import {
+  LogicalPosition,
   LogicalSize,
-  PhysicalPosition,
-  availableMonitors,
   cursorPosition,
-  currentMonitor,
   getCurrentWindow,
 } from "@tauri-apps/api/window";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
@@ -92,17 +90,6 @@ interface WindowPlacement {
   y: number;
 }
 
-interface PhysicalWorkArea {
-  position: {
-    x: number;
-    y: number;
-  };
-  size: {
-    width: number;
-    height: number;
-  };
-}
-
 export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
@@ -179,7 +166,7 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
   const window = getCurrentWindow();
   const position = await normalizePetWindowPosition(settings);
   await window.setSize(new LogicalSize(settings.width, settings.height));
-  await window.setPosition(new PhysicalPosition(position.x, position.y));
+  await window.setPosition(new LogicalPosition(position.x, position.y));
   await window.setAlwaysOnTop(settings.alwaysOnTop);
   await window.setIgnoreCursorEvents(settings.clickThrough);
 }
@@ -196,34 +183,18 @@ export async function normalizePetWindowPosition(
     return requested;
   }
 
-  const monitors = await availableMonitors();
-  if (monitors.length === 0) {
-    return requested;
-  }
-
-  const chosen =
-    monitors.find((monitor) => pointInsideWorkArea(requested, monitor.workArea)) ??
-    monitors
-      .map((monitor) => ({
-        monitor,
-        distance: distanceToWorkArea(requested, monitor.workArea),
-      }))
-      .sort((left, right) => left.distance - right.distance)[0]?.monitor ??
-    monitors[0];
-
-  const scaleFactor = chosen.scaleFactor || 1;
-  const windowWidth = Math.round(settings.width * scaleFactor);
-  const windowHeight = Math.round(settings.height * scaleFactor);
-  const margin = Math.round(8 * scaleFactor);
-  const workArea = chosen.workArea;
-  const minX = workArea.position.x + margin;
-  const minY = workArea.position.y + margin;
-  const maxX = workArea.position.x + workArea.size.width - windowWidth - margin;
-  const maxY = workArea.position.y + workArea.size.height - windowHeight - margin;
+  const scaleFactor = await currentWindowScaleFactor();
+  const workArea = browserWorkArea();
+  const migrated = migrateSavedPositionToLogical(requested, workArea, scaleFactor);
+  const margin = 8;
+  const minX = workArea.x + margin;
+  const minY = workArea.y + margin;
+  const maxX = workArea.x + workArea.width - settings.width - margin;
+  const maxY = workArea.y + workArea.height - settings.height - margin;
 
   return {
-    x: clamp(requested.x, minX, Math.max(minX, maxX)),
-    y: clamp(requested.y, minY, Math.max(minY, maxY)),
+    x: clamp(migrated.x, minX, Math.max(minX, maxX)),
+    y: clamp(migrated.y, minY, Math.max(minY, maxY)),
   };
 }
 
@@ -251,7 +222,7 @@ export async function setCurrentWindowFrame(
     return;
   }
   const window = getCurrentWindow();
-  await window.setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+  await window.setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
   await window.setSize(new LogicalSize(width, height));
 }
 
@@ -260,7 +231,7 @@ export async function captureCurrentWindowPosition(): Promise<{ x: number; y: nu
     return null;
   }
   const position = await getCurrentWindow().outerPosition();
-  return { x: position.x, y: position.y };
+  return toLogicalPosition({ x: position.x, y: position.y }, await currentWindowScaleFactor());
 }
 
 export async function captureCursorPosition(): Promise<{ x: number; y: number } | null> {
@@ -268,14 +239,14 @@ export async function captureCursorPosition(): Promise<{ x: number; y: number } 
     return null;
   }
   const position = await cursorPosition();
-  return { x: position.x, y: position.y };
+  return toLogicalPosition({ x: position.x, y: position.y }, await currentWindowScaleFactor());
 }
 
 export async function moveCurrentWindowTo(x: number, y: number): Promise<void> {
   if (!isTauriRuntime()) {
     return;
   }
-  await getCurrentWindow().setPosition(new PhysicalPosition(Math.round(x), Math.round(y)));
+  await getCurrentWindow().setPosition(new LogicalPosition(Math.round(x), Math.round(y)));
 }
 
 export async function currentWindowScaleFactor(): Promise<number> {
@@ -286,56 +257,71 @@ export async function currentWindowScaleFactor(): Promise<number> {
 }
 
 export async function currentWindowWorkArea(): Promise<MonitorWorkArea | null> {
-  if (!isTauriRuntime()) {
-    const screen = window.screen as Screen & { availLeft?: number; availTop?: number };
-    return {
-      x: screen.availLeft ?? 0,
-      y: screen.availTop ?? 0,
-      width: screen.availWidth,
-      height: screen.availHeight,
-      scaleFactor: window.devicePixelRatio || 1,
-    };
-  }
-
-  const monitor = await currentMonitor();
-  if (!monitor) {
-    return null;
-  }
-
+  const workArea = browserWorkArea();
   return {
-    x: monitor.workArea.position.x,
-    y: monitor.workArea.position.y,
-    width: monitor.workArea.size.width,
-    height: monitor.workArea.size.height,
-    scaleFactor: monitor.scaleFactor,
+    ...workArea,
+    scaleFactor: await currentWindowScaleFactor(),
   };
-}
-
-function pointInsideWorkArea(point: WindowPlacement, workArea: PhysicalWorkArea): boolean {
-  return (
-    point.x >= workArea.position.x &&
-    point.x <= workArea.position.x + workArea.size.width &&
-    point.y >= workArea.position.y &&
-    point.y <= workArea.position.y + workArea.size.height
-  );
-}
-
-function distanceToWorkArea(point: WindowPlacement, workArea: PhysicalWorkArea): number {
-  const clampedX = clamp(
-    point.x,
-    workArea.position.x,
-    workArea.position.x + workArea.size.width,
-  );
-  const clampedY = clamp(
-    point.y,
-    workArea.position.y,
-    workArea.position.y + workArea.size.height,
-  );
-  return Math.hypot(point.x - clampedX, point.y - clampedY);
 }
 
 function clamp(value: number, min: number, max: number): number {
   return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+function browserWorkArea(): Omit<MonitorWorkArea, "scaleFactor"> {
+  const screen = window.screen as Screen & { availLeft?: number; availTop?: number };
+  return {
+    x: screen.availLeft ?? 0,
+    y: screen.availTop ?? 0,
+    width: screen.availWidth,
+    height: screen.availHeight,
+  };
+}
+
+function migrateSavedPositionToLogical(
+  position: WindowPlacement,
+  workArea: Omit<MonitorWorkArea, "scaleFactor">,
+  scaleFactor: number,
+): WindowPlacement {
+  if (scaleFactor <= 1) {
+    return position;
+  }
+
+  const outsideLogical =
+    position.x > workArea.x + workArea.width ||
+    position.y > workArea.y + workArea.height ||
+    position.x < workArea.x - workArea.width ||
+    position.y < workArea.y - workArea.height;
+  const scaled = {
+    x: Math.round(position.x / scaleFactor),
+    y: Math.round(position.y / scaleFactor),
+  };
+  const scaledInsideLogical =
+    scaled.x >= workArea.x - 64 &&
+    scaled.x <= workArea.x + workArea.width + 64 &&
+    scaled.y >= workArea.y - 64 &&
+    scaled.y <= workArea.y + workArea.height + 64;
+
+  return outsideLogical && scaledInsideLogical ? scaled : position;
+}
+
+function toLogicalPosition(position: WindowPlacement, scaleFactor: number): WindowPlacement {
+  if (scaleFactor <= 1) {
+    return {
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+    };
+  }
+
+  const workArea = browserWorkArea();
+  return migrateSavedPositionToLogical(
+    {
+      x: Math.round(position.x),
+      y: Math.round(position.y),
+    },
+    workArea,
+    scaleFactor,
+  );
 }
 
 export function toAssetUrl(path: string): string {
