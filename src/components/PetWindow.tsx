@@ -40,6 +40,11 @@ import { usePetAnimation } from "../lib/usePetAnimation";
 type ChatPhase = "idle" | "editing" | "thinking" | "answer" | "error";
 type ChatSide = "left" | "right";
 
+interface WindowOffset {
+  x: number;
+  y: number;
+}
+
 interface PetPalette {
   accent: string;
   bubble: string;
@@ -64,10 +69,12 @@ export function PetWindow() {
   const [chatPhase, setChatPhase] = useState<ChatPhase>("idle");
   const [chatError, setChatError] = useState("");
   const [chatSide, setChatSide] = useState<ChatSide>("right");
+  const [petOffsetY, setPetOffsetY] = useState(0);
   const [palette, setPalette] = useState<PetPalette>(DEFAULT_PALETTE);
   const settingsRef = useRef<AppSettings>(DEFAULT_SETTINGS);
   const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const petAnchorRef = useRef<{ x: number; y: number } | null>(null);
+  const windowOffsetRef = useRef<WindowOffset>({ x: 0, y: 0 });
   const dragRef = useRef<{
     pointerId: number;
     startScreenX: number;
@@ -75,6 +82,7 @@ export function PetWindow() {
     originX: number;
     originY: number;
     windowOffsetX: number;
+    windowOffsetY: number;
     scaleFactor: number;
     moved: boolean;
     lastDirection: "running-left" | "running-right" | null;
@@ -177,11 +185,12 @@ export function PetWindow() {
   const chatExpanded = settings.llmChatEnabled && chatOpen;
   const chatPanelWidth = Math.min(360, Math.max(280, Math.round(settings.width * 0.9)));
   const chatGap = 12;
+  const getTargetRenderSize = (expanded: boolean) => ({
+    width: settings.width + (expanded ? chatPanelWidth + chatGap : 0),
+    height: expanded ? Math.max(settings.height, 330) : settings.height,
+  });
   const renderSize = useMemo(
-    () => ({
-      width: settings.width + (chatExpanded ? chatPanelWidth + chatGap : 0),
-      height: chatExpanded ? Math.max(settings.height, 330) : settings.height,
-    }),
+    () => getTargetRenderSize(chatExpanded),
     [chatExpanded, chatGap, chatPanelWidth, settings.height, settings.width],
   );
   const conversationState = useMemo(
@@ -335,8 +344,8 @@ export function PetWindow() {
     const position = await captureCurrentWindowPosition();
     const anchor = position
       ? {
-          x: position.x,
-          y: position.y,
+          x: position.x + windowOffsetRef.current.x,
+          y: position.y + windowOffsetRef.current.y,
         }
       : {
           x: settings.x ?? 80,
@@ -353,6 +362,8 @@ export function PetWindow() {
     const anchor = await resolvePetAnchor();
     setChatOpen(false);
     petAnchorRef.current = anchor;
+    windowOffsetRef.current = { x: 0, y: 0 };
+    setPetOffsetY(0);
     await setCurrentWindowFrame(settings.width, settings.height, anchor.x, anchor.y);
   }
 
@@ -400,7 +411,7 @@ export function PetWindow() {
           chatOpen && chatSide === "left"
             ? position.x + (chatPanelWidth + chatGap) * scaleFactor
             : position.x,
-        y: position.y,
+        y: position.y + (chatOpen ? windowOffsetRef.current.y : 0),
       };
     }
 
@@ -418,12 +429,42 @@ export function PetWindow() {
     return expanded && side === "left" ? (chatPanelWidth + chatGap) * scaleFactor : 0;
   }
 
+  async function calculateChatFrameY(
+    petAnchorY: number,
+    scaleFactor: number,
+    windowHeight: number,
+  ): Promise<{ y: number; offsetPhysical: number; offsetLogical: number }> {
+    const workArea = await currentWindowWorkArea();
+    if (!workArea) {
+      return {
+        y: petAnchorY,
+        offsetPhysical: 0,
+        offsetLogical: 0,
+      };
+    }
+
+    const margin = 8 * scaleFactor;
+    const windowHeightPhysical = windowHeight * scaleFactor;
+    const minY = workArea.y + margin;
+    const maxY = workArea.y + workArea.height - windowHeightPhysical - margin;
+    const y = Math.max(minY, Math.min(petAnchorY, Math.max(minY, maxY)));
+    const offsetPhysical = Math.max(0, petAnchorY - y);
+
+    return {
+      y,
+      offsetPhysical,
+      offsetLogical: offsetPhysical / scaleFactor,
+    };
+  }
+
   async function applyChatWindowFrame(
     expanded: boolean,
     side: ChatSide,
     anchor = petAnchorRef.current,
   ) {
     if (!expanded) {
+      windowOffsetRef.current = { x: 0, y: 0 };
+      setPetOffsetY(0);
       if (!anchor) {
         await setCurrentWindowSize(settings.width, settings.height);
         return;
@@ -433,10 +474,18 @@ export function PetWindow() {
     }
 
     const petAnchor = anchor ?? (await resolvePetAnchor());
+    const targetRenderSize = getTargetRenderSize(expanded);
     const scaleFactor = await currentWindowScaleFactor();
+    const yFrame = await calculateChatFrameY(petAnchor.y, scaleFactor, targetRenderSize.height);
+    const offsetX = currentChatWindowOffsetX(scaleFactor, expanded, side);
     petAnchorRef.current = petAnchor;
-    const x = petAnchor.x - currentChatWindowOffsetX(scaleFactor, expanded, side);
-    await setCurrentWindowFrame(renderSize.width, renderSize.height, x, petAnchor.y);
+    windowOffsetRef.current = {
+      x: offsetX,
+      y: yFrame.offsetPhysical,
+    };
+    setPetOffsetY(yFrame.offsetLogical);
+    const x = petAnchor.x - offsetX;
+    await setCurrentWindowFrame(targetRenderSize.width, targetRenderSize.height, x, yFrame.y);
   }
 
   async function handlePointerDown(event: PointerEvent<HTMLElement>) {
@@ -453,13 +502,15 @@ export function PetWindow() {
       currentWindowScaleFactor(),
     ]);
     const windowOffsetX = currentChatWindowOffsetX(scaleFactor);
+    const windowOffsetY = chatOpen ? windowOffsetRef.current.y : 0;
     dragRef.current = {
       pointerId: event.pointerId,
       startScreenX: event.screenX,
       startScreenY: event.screenY,
       originX: (position?.x ?? settings.x ?? 80) + windowOffsetX,
-      originY: position?.y ?? settings.y ?? 80,
+      originY: (position?.y ?? settings.y ?? 80) + windowOffsetY,
       windowOffsetX,
+      windowOffsetY,
       scaleFactor,
       moved: false,
       lastDirection: null,
@@ -487,7 +538,7 @@ export function PetWindow() {
       y: drag.originY + dy,
     };
     petAnchorRef.current = petAnchor;
-    await moveCurrentWindowTo(petAnchor.x - drag.windowOffsetX, petAnchor.y);
+    await moveCurrentWindowTo(petAnchor.x - drag.windowOffsetX, petAnchor.y - drag.windowOffsetY);
   }
 
   async function handlePointerUp(event: PointerEvent<HTMLElement>) {
@@ -508,7 +559,7 @@ export function PetWindow() {
     }
     const petAnchor = {
       x: position.x + drag.windowOffsetX,
-      y: position.y,
+      y: position.y + drag.windowOffsetY,
     };
     petAnchorRef.current = petAnchor;
     const next = { ...settings, ...petAnchor };
@@ -530,6 +581,7 @@ export function PetWindow() {
   const shellStyle = {
     width: renderSize.width,
     height: renderSize.height,
+    "--pet-offset-y": `${petOffsetY}px`,
     "--pet-accent": palette.accent,
     "--pet-bubble": palette.bubble,
     "--pet-bubble-ink": palette.ink,

@@ -1,4 +1,5 @@
 import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
 import {
   LogicalSize,
   PhysicalPosition,
@@ -7,8 +8,14 @@ import {
 } from "@tauri-apps/api/window";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { open } from "@tauri-apps/plugin-dialog";
+import packageInfo from "../../package.json";
 import type { AppSettings } from "./settings";
 import type { PetPackage } from "./petContract";
+
+const LATEST_RELEASE_API_URL =
+  "https://api.github.com/repos/wangling-miao/Desktop-Pet-Launcher/releases/latest";
+export const APP_LATEST_RELEASE_URL =
+  "https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest";
 
 export interface GalleryPet {
   id: string;
@@ -55,6 +62,14 @@ export interface LlmChatRequest {
 
 export interface LlmChatResponse {
   content: string;
+}
+
+export interface UpdateCheckResult {
+  currentVersion: string;
+  latestVersion: string;
+  updateAvailable: boolean;
+  releaseUrl: string;
+  releaseName?: string;
 }
 
 export interface MonitorWorkArea {
@@ -238,6 +253,49 @@ export async function writeAutostart(enabled: boolean): Promise<void> {
   }
 }
 
+export async function readAppVersion(): Promise<string> {
+  if (!isTauriRuntime()) {
+    return packageInfo.version;
+  }
+
+  try {
+    return await getVersion();
+  } catch {
+    return packageInfo.version;
+  }
+}
+
+export async function checkForAppUpdate(): Promise<UpdateCheckResult> {
+  const [currentVersion, response] = await Promise.all([
+    readAppVersion(),
+    fetch(LATEST_RELEASE_API_URL, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/vnd.github+json",
+      },
+    }),
+  ]);
+
+  if (!response.ok) {
+    throw new Error(`GitHub Release HTTP ${response.status}`);
+  }
+
+  const latest = (await response.json()) as {
+    tag_name?: string;
+    name?: string;
+    html_url?: string;
+  };
+  const latestVersion = normalizeVersion(latest.tag_name ?? "");
+
+  return {
+    currentVersion: normalizeVersion(currentVersion),
+    latestVersion,
+    updateAvailable: compareVersions(latestVersion, currentVersion) > 0,
+    releaseUrl: latest.html_url ?? APP_LATEST_RELEASE_URL,
+    releaseName: latest.name,
+  };
+}
+
 export async function sendLlmChat(request: LlmChatRequest): Promise<LlmChatResponse> {
   if (!isTauriRuntime()) {
     await new Promise((resolve) => window.setTimeout(resolve, 520));
@@ -248,4 +306,28 @@ export async function sendLlmChat(request: LlmChatRequest): Promise<LlmChatRespo
   }
 
   return invoke<LlmChatResponse>("send_llm_chat", { request });
+}
+
+function normalizeVersion(version: string): string {
+  return version.trim().replace(/^v/i, "");
+}
+
+function compareVersions(left: string, right: string): number {
+  const leftParts = normalizeVersion(left).split(/[.-]/).map(toVersionNumber);
+  const rightParts = normalizeVersion(right).split(/[.-]/).map(toVersionNumber);
+  const length = Math.max(leftParts.length, rightParts.length, 3);
+
+  for (let index = 0; index < length; index += 1) {
+    const delta = (leftParts[index] ?? 0) - (rightParts[index] ?? 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+
+  return 0;
+}
+
+function toVersionNumber(value: string): number {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
 }

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  BadgeCheck,
   Bot,
   Download,
   Eye,
+  ExternalLink,
   FolderPlus,
   FolderOpen,
   Globe2,
@@ -31,7 +33,9 @@ import {
   type AppSettings,
 } from "../lib/settings";
 import {
+  APP_LATEST_RELEASE_URL,
   applyPetWindowSettings,
+  checkForAppUpdate,
   choosePetFolder,
   importPetFromUrl,
   listPetPackages,
@@ -41,6 +45,7 @@ import {
   writeAutostart,
   type GalleryIndex,
   type GalleryPet,
+  type UpdateCheckResult,
 } from "../lib/tauriApi";
 
 const STATE_LABELS: Record<PetState, string> = {
@@ -55,6 +60,16 @@ const STATE_LABELS: Record<PetState, string> = {
   review: "检查结果",
 };
 
+type UpdateCheckStatus = "idle" | "checking" | "available" | "latest" | "error";
+
+interface UpdateCheckState {
+  status: UpdateCheckStatus;
+  currentVersion: string;
+  latestVersion: string;
+  releaseUrl: string;
+  message: string;
+}
+
 export function SettingsWindow() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [packages, setPackages] = useState<PetPackage[]>([]);
@@ -62,6 +77,13 @@ export function SettingsWindow() {
   const [gallerySearch, setGallerySearch] = useState("");
   const [galleryUrlDraft, setGalleryUrlDraft] = useState(DEFAULT_GALLERY_INDEX_URL);
   const [galleryLoading, setGalleryLoading] = useState(false);
+  const [updateCheck, setUpdateCheck] = useState<UpdateCheckState>({
+    status: "idle",
+    currentVersion: "",
+    latestVersion: "",
+    releaseUrl: APP_LATEST_RELEASE_URL,
+    message: "尚未检查更新",
+  });
   const [status, setStatus] = useState("已就绪");
   const [newPetFolder, setNewPetFolder] = useState("");
 
@@ -108,6 +130,7 @@ export function SettingsWindow() {
       });
       setGalleryUrlDraft(loadedSettings.galleryIndexUrl);
       void loadGallery(loadedSettings.galleryIndexUrl, false);
+      void checkUpdates(false);
     }
     void boot();
     return () => {
@@ -269,6 +292,33 @@ export function SettingsWindow() {
     } catch (error) {
       console.error("Failed to update autostart", error);
       setStatus("开机自启更新失败，请确认已安装最新版");
+    }
+  }
+
+  async function checkUpdates(manual = true) {
+    setUpdateCheck((current) => ({
+      ...current,
+      status: "checking",
+      message: "正在检查更新...",
+    }));
+
+    try {
+      const result = await checkForAppUpdate();
+      const next = createUpdateCheckState(result);
+      setUpdateCheck(next);
+      if (manual) {
+        setStatus(next.status === "available" ? `发现新版本 ${next.latestVersion}` : "当前已是最新版本");
+      }
+    } catch (error) {
+      console.error("Failed to check updates", error);
+      setUpdateCheck((current) => ({
+        ...current,
+        status: "error",
+        message: "检查失败，请稍后再试",
+      }));
+      if (manual) {
+        setStatus("更新检查失败，请检查网络");
+      }
     }
   }
 
@@ -747,6 +797,50 @@ export function SettingsWindow() {
             />
           </section>
 
+          <section className={`panel update-panel is-${updateCheck.status}`}>
+            <div className="panel-title">
+              <BadgeCheck size={18} />
+              <h2>更新</h2>
+            </div>
+            <div className="update-card">
+              <strong>
+                {updateCheck.status === "available"
+                  ? `发现新版本 ${updateCheck.latestVersion}`
+                  : updateCheck.status === "latest"
+                    ? "当前已是最新版本"
+                    : updateCheck.status === "checking"
+                      ? "正在检查更新"
+                      : updateCheck.status === "error"
+                        ? "暂时无法检查更新"
+                        : "检查更新"}
+              </strong>
+              <span>{updateCheck.message}</span>
+              <small>
+                当前版本 {updateCheck.currentVersion || "未知"}
+                {updateCheck.latestVersion ? ` · 最新版本 ${updateCheck.latestVersion}` : ""}
+              </small>
+            </div>
+            <div className="button-row">
+              <button
+                type="button"
+                onClick={() => checkUpdates()}
+                disabled={updateCheck.status === "checking"}
+              >
+                <RefreshCw size={16} />
+                {updateCheck.status === "checking" ? "检查中" : "检查更新"}
+              </button>
+              <a
+                className="settings-link-button"
+                href={updateCheck.releaseUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink size={16} />
+                发布页
+              </a>
+            </div>
+          </section>
+
           <section className="panel compact-panel">
             <div className="panel-title">
               <Eye size={18} />
@@ -770,6 +864,26 @@ interface NumberFieldProps {
   min: number;
   max: number;
   onChange: (value: number) => void;
+}
+
+function createUpdateCheckState(result: UpdateCheckResult): UpdateCheckState {
+  if (result.updateAvailable) {
+    return {
+      status: "available",
+      currentVersion: result.currentVersion,
+      latestVersion: result.latestVersion,
+      releaseUrl: result.releaseUrl,
+      message: "有新版本可用，可到发布页下载。不会自动安装，也不会弹窗打扰。",
+    };
+  }
+
+  return {
+    status: "latest",
+    currentVersion: result.currentVersion,
+    latestVersion: result.latestVersion,
+    releaseUrl: result.releaseUrl,
+    message: "当前安装的版本已经是最新版本。",
+  };
 }
 
 function NumberField({ label, value, min, max, onChange }: NumberFieldProps) {

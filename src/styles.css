@@ -53,6 +53,7 @@ button {
   position: relative;
   display: grid;
   flex: 0 0 auto;
+  margin-top: var(--pet-offset-y, 0);
   place-items: center;
 }
 
@@ -583,6 +584,7 @@ h2 {
 }
 
 .button-row button,
+.settings-link-button,
 .wide-button {
   height: 38px;
   display: inline-flex;
@@ -595,6 +597,7 @@ h2 {
 }
 
 .button-row button:hover,
+.settings-link-button:hover,
 .wide-button:hover {
   background: #2a2a28;
 }
@@ -773,6 +776,37 @@ h2 {
 .gallery-pet-card button {
   min-width: 82px;
   padding: 0 12px;
+}
+
+.update-card {
+  display: grid;
+  gap: 8px;
+  padding: 13px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  background: var(--panel-strong);
+  border: 1px solid #e1e6e0;
+  border-radius: 8px;
+}
+
+.update-card strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.update-card span,
+.update-card small {
+  line-height: 1.5;
+}
+
+.update-card small {
+  font-size: 12px;
+}
+
+.update-panel.is-available .update-card {
+  color: #5c4b11;
+  background: #fff4bf;
+  border-color: #efd66e;
 }
 
 .slider-field {
