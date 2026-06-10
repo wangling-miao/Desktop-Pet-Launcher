@@ -1,6 +1,7 @@
 const pet = document.querySelector(".pet-window img");
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-window.addEventListener("pointermove", (event) => {
+function updatePetTilt(event) {
   if (!pet) {
     return;
   }
@@ -8,7 +9,27 @@ window.addEventListener("pointermove", (event) => {
   const y = (event.clientY / window.innerHeight - 0.5) * 14;
   pet.style.setProperty("--tilt-x", `${x}px`);
   pet.style.setProperty("--tilt-y", `${y}px`);
-});
+}
+
+function syncMotionPreference() {
+  if (!pet) {
+    return;
+  }
+  window.removeEventListener("pointermove", updatePetTilt);
+  if (reducedMotionQuery.matches) {
+    pet.style.removeProperty("--tilt-x");
+    pet.style.removeProperty("--tilt-y");
+    return;
+  }
+  window.addEventListener("pointermove", updatePetTilt);
+}
+
+syncMotionPreference();
+if (typeof reducedMotionQuery.addEventListener === "function") {
+  reducedMotionQuery.addEventListener("change", syncMotionPreference);
+} else if (typeof reducedMotionQuery.addListener === "function") {
+  reducedMotionQuery.addListener(syncMotionPreference);
+}
 
 const starCount = document.querySelector("[data-stars]");
 

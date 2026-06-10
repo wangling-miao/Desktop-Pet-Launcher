@@ -7,6 +7,26 @@
       name="description"
       content="Desktop Pet Launcher 是一个开源高清桌宠启动器，兼容 Codex / hatch-pet 桌宠包，支持透明置顶、托盘、设置页、自定义宠物文件夹和 4x 高清素材。"
     />
+    <link rel="canonical" href="https://pet.nether.top/" />
+    <meta name="theme-color" content="#111419" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Desktop Pet Launcher" />
+    <meta property="og:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
+    <meta
+      property="og:description"
+      content="透明置顶、托盘控制、桌宠图鉴、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+    />
+    <meta property="og:url" content="https://pet.nether.top/" />
+    <meta property="og:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
+    <meta
+      name="twitter:description"
+      content="透明置顶、托盘控制、桌宠图鉴、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+    />
+    <meta name="twitter:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
     <title>Desktop Pet Launcher</title>
     <link rel="icon" href="assets/desktop-pet-launcher-icon.png" />
     <link rel="stylesheet" href="styles.css" />
@@ -215,13 +235,71 @@
           <p>Download</p>
           <h2>下载最新版，开始放一只桌宠在屏幕边上。</h2>
           <p>
-            Windows 用户推荐 setup.exe，也可以下载 MSI；macOS 选择 dmg；
-            Linux 可选择 AppImage、deb 或 rpm。所有安装包都从 GitHub Release 获取。
+            选择你的系统，下载推荐安装包。安装完成后从托盘打开设置，
+            就能导入桌宠图鉴或本地宠物包。
           </p>
         </div>
-        <div class="download-actions">
-          <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
-            打开下载页
+        <div class="download-card-grid" aria-label="系统下载">
+          <article class="download-card">
+            <span>Windows</span>
+            <h3>推荐 setup.exe</h3>
+            <p>适合大多数 Windows 10/11 用户，双击安装即可。企业或静默部署场景可选 MSI。</p>
+            <a
+              class="primary-action"
+              href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_x64-setup.exe"
+            >
+              下载 Windows 安装器
+            </a>
+            <div class="download-alt-links">
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_x64_en-US.msi">
+                MSI 备用
+              </a>
+            </div>
+            <small>未签名版本可能触发 SmartScreen，选择“更多信息”后继续运行。</small>
+          </article>
+
+          <article class="download-card">
+            <span>macOS</span>
+            <h3>选择对应芯片的 DMG</h3>
+            <p>Apple Silicon 选择 aarch64，Intel Mac 选择 x64。下载后拖入 Applications。</p>
+            <a
+              class="primary-action"
+              href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_aarch64.dmg"
+            >
+              Apple Silicon
+            </a>
+            <div class="download-alt-links">
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_x64.dmg">
+                Intel Mac
+              </a>
+            </div>
+            <small>未公证构建可能需要在系统设置的“隐私与安全性”里允许打开。</small>
+          </article>
+
+          <article class="download-card">
+            <span>Linux</span>
+            <h3>推荐 AppImage</h3>
+            <p>AppImage 适合直接试用；Debian/Ubuntu 可选 deb，Fedora/openSUSE 可选 rpm。</p>
+            <a
+              class="primary-action"
+              href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_amd64.AppImage"
+            >
+              下载 AppImage
+            </a>
+            <div class="download-alt-links">
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher_0.2.0_amd64.deb">
+                deb
+              </a>
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/download/V0.2.0/Desktop.Pet.Launcher-0.2.0-1.x86_64.rpm">
+                rpm
+              </a>
+            </div>
+            <small>如果 AppImage 无法运行，先执行 <code>chmod +x</code>，并确认系统 WebKit 依赖已安装。</small>
+          </article>
+        </div>
+        <div class="download-footer-actions">
+          <a class="secondary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/tag/V0.2.0">
+            查看全部 Release 文件
           </a>
           <a class="secondary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
             桌宠制作 Skill

@@ -314,7 +314,8 @@ h1 span {
 .repo-badges,
 .hero-tags,
 .codex-actions,
-.download-actions {
+.download-actions,
+.download-footer-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -587,20 +588,111 @@ h3 {
 }
 
 .download-band {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 28px;
+  position: relative;
+  display: grid;
+  gap: 30px;
+  overflow: hidden;
   color: #f8fff8;
-  background: var(--night);
+  background:
+    radial-gradient(circle at 88% 18%, rgba(99, 208, 173, 0.22), transparent 28%),
+    linear-gradient(90deg, rgba(248, 255, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(248, 255, 248, 0.05) 1px, transparent 1px),
+    var(--night);
+  background-size: auto, 38px 38px, 38px 38px, auto;
 }
 
 .download-copy {
-  max-width: 780px;
+  max-width: 980px;
 }
 
-.download-actions {
-  justify-content: flex-end;
+.download-copy h2 {
+  max-width: 900px;
+}
+
+.download-copy p:last-child {
+  max-width: 790px;
+  color: rgba(248, 255, 248, 0.76);
+}
+
+.download-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.download-card {
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  padding: 23px;
+  border: 1px solid rgba(248, 255, 248, 0.18);
+  border-radius: 8px;
+  color: var(--ink);
+  background: #fffdf4;
+  box-shadow: 0 20px 54px rgba(0, 0, 0, 0.18);
+}
+
+.download-card span {
+  color: var(--coral);
+  font-size: 13px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.download-card h3 {
+  margin-top: 18px;
+  font-size: clamp(24px, 2.1vw, 32px);
+  line-height: 1.08;
+}
+
+.download-card p {
+  margin-top: 13px;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.download-card .primary-action {
+  width: 100%;
+  margin-top: auto;
+  color: var(--ink);
+}
+
+.download-alt-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.download-alt-links a {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid rgba(19, 21, 26, 0.22);
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.download-card small {
+  display: block;
+  margin-top: 15px;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.download-card code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: rgba(19, 21, 26, 0.08);
+  font: inherit;
+  font-weight: 900;
+}
+
+.download-footer-actions {
+  justify-content: flex-start;
 }
 
 .gallery-page {
@@ -974,13 +1066,8 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .download-band {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .download-actions {
-    justify-content: flex-start;
+  .download-card-grid {
+    grid-template-columns: 1fr;
   }
 
 }
@@ -1072,5 +1159,30 @@ h3 {
   .contract-table strong {
     padding: 12px 9px;
     font-size: 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .pet-window {
+    animation: none !important;
+  }
+
+  .pet-window img,
+  .quick-links a:hover,
+  .quick-links a:focus-visible {
+    transform: none !important;
   }
 }
