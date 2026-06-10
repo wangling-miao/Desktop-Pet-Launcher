@@ -32,6 +32,26 @@ export interface GalleryIndex {
   pets: GalleryPet[];
 }
 
+export type ChatRole = "user" | "assistant";
+
+export interface ChatMessage {
+  role: ChatRole;
+  content: string;
+}
+
+export interface LlmChatRequest {
+  endpoint: string;
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  temperature: number;
+  messages: ChatMessage[];
+}
+
+export interface LlmChatResponse {
+  content: string;
+}
+
 export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
@@ -114,6 +134,13 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
   await window.setIgnoreCursorEvents(settings.clickThrough);
 }
 
+export async function setCurrentWindowSize(width: number, height: number): Promise<void> {
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await getCurrentWindow().setSize(new LogicalSize(width, height));
+}
+
 export async function captureCurrentWindowPosition(): Promise<{ x: number; y: number } | null> {
   if (!isTauriRuntime()) {
     return null;
@@ -156,4 +183,16 @@ export async function writeAutostart(enabled: boolean): Promise<void> {
   } else {
     await disable();
   }
+}
+
+export async function sendLlmChat(request: LlmChatRequest): Promise<LlmChatResponse> {
+  if (!isTauriRuntime()) {
+    await new Promise((resolve) => window.setTimeout(resolve, 520));
+    return {
+      content:
+        "这是预览环境的模拟回复。打包运行后，我会使用你在设置里配置的接口地址和模型来对话。",
+    };
+  }
+
+  return invoke<LlmChatResponse>("send_llm_chat", { request });
 }

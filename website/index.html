@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Desktop Pet Launcher 是一个开源高清桌宠启动器，兼容 Codex / hatch-pet 桌宠包，支持透明置顶、托盘、设置页、自定义宠物文件夹和 4x 高清素材。"
+      content="Desktop Pet Launcher 是一个开源高清桌宠启动器，兼容 Codex / hatch-pet 桌宠包，支持透明置顶、托盘、设置页、自定义宠物文件夹、4x 高清素材和可选 AI 对话。"
     />
     <link rel="canonical" href="https://pet.nether.top/" />
     <meta name="theme-color" content="#111419" />
@@ -14,7 +14,7 @@
     <meta property="og:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
     <meta
       property="og:description"
-      content="透明置顶、托盘控制、桌宠图鉴、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+      content="透明置顶、托盘控制、桌宠图鉴、AI 对话可选、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
     />
     <meta property="og:url" content="https://pet.nether.top/" />
     <meta property="og:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
@@ -24,7 +24,7 @@
     <meta name="twitter:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
     <meta
       name="twitter:description"
-      content="透明置顶、托盘控制、桌宠图鉴、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+      content="透明置顶、托盘控制、桌宠图鉴、AI 对话可选、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
     />
     <meta name="twitter:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
     <title>Desktop Pet Launcher</title>
@@ -52,6 +52,10 @@
                 <i></i>
                 <strong>宠物文件夹</strong>
                 <small>Codex / hatch-pet 兼容</small>
+              </div>
+              <div class="ai-chat-preview">
+                <span>AI 对话</span>
+                <strong>你好，我在桌面边上。</strong>
               </div>
               <div class="tray-menu">
                 <span>托盘菜单</span>
@@ -92,7 +96,7 @@
           </h1>
           <p class="lede">
             Desktop Pet Launcher 用 Tauri 2 构建，支持透明无边框桌宠窗口、托盘控制、
-            自定义宠物文件夹、开机自启和 4x 高清宠物包。旧的 Codex / hatch-pet 宠物包也可以继续用。
+            自定义宠物文件夹、开机自启、可选 AI 对话和 4x 高清宠物包。旧的 Codex / hatch-pet 宠物包也可以继续用。
           </p>
           <div class="hero-actions">
             <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
@@ -126,6 +130,7 @@
             <span>透明置顶</span>
             <span>托盘菜单</span>
             <span>自定义文件夹</span>
+            <span>AI 对话可选</span>
             <span>Codex 桌宠兼容</span>
             <span>4x 高清包</span>
           </div>
@@ -185,6 +190,36 @@
             <h3>高清素材优先</h3>
             <p>根据窗口尺寸和屏幕倍率选择 1x、2x 或 4x atlas，放大后尽量保持清晰。</p>
           </article>
+          <article>
+            <span>05</span>
+            <h3>想聊再打开</h3>
+            <p>AI 对话默认关闭。自己填接口地址、模型和 Key 后，桌宠旁才会出现对话按钮。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="ai-band" id="ai-chat">
+        <div class="ai-card">
+          <span>Optional LLM chat</span>
+          <h2>不配置就安静陪着，想聊天时再接入模型。</h2>
+          <p>
+            在设置页填 OpenAI 兼容接口 URL、模型和 Key。桌宠会在旁边展开对话气泡，
+            气泡颜色从当前宠物素材自动取色；输入、请求、结果和失败会切换到对应动作。
+          </p>
+        </div>
+        <div class="ai-steps" aria-label="AI 对话步骤">
+          <div>
+            <strong>01</strong>
+            <span>开启 AI 对话</span>
+          </div>
+          <div>
+            <strong>02</strong>
+            <span>填写 URL / Key / 模型</span>
+          </div>
+          <div>
+            <strong>03</strong>
+            <span>从桌宠旁边开始聊天</span>
+          </div>
         </div>
       </section>
 

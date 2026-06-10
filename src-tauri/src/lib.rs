@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -92,6 +93,35 @@ struct PetWindowSettingsPatch {
     height: Option<f64>,
     always_on_top: Option<bool>,
     click_through: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LlmChatMessage {
+    role: String,
+    content: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LlmChatRequest {
+    endpoint: String,
+    api_key: String,
+    model: String,
+    system_prompt: String,
+    temperature: f32,
+    messages: Vec<LlmChatMessage>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct LlmChatResponse {
+    content: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ChatCompletionPayload {
+    model: String,
+    messages: Vec<LlmChatMessage>,
+    temperature: f32,
 }
 
 #[tauri::command]
@@ -204,7 +234,10 @@ fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String
     }
     let bytes = response.bytes().map_err(|error| error.to_string())?;
 
-    let app_data = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let app_data = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
     let pets_root = app_data.join("pets");
     let imports_root = app_data.join("imports");
     fs::create_dir_all(&pets_root).map_err(|error| error.to_string())?;
@@ -225,10 +258,13 @@ fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String
         }
 
         let destination = pets_root.join(&package.id);
-        let pets_root_canonical = pets_root.canonicalize().map_err(|error| error.to_string())?;
+        let pets_root_canonical = pets_root
+            .canonicalize()
+            .map_err(|error| error.to_string())?;
         if destination.exists() {
-            let destination_canonical =
-                destination.canonicalize().map_err(|error| error.to_string())?;
+            let destination_canonical = destination
+                .canonicalize()
+                .map_err(|error| error.to_string())?;
             if !destination_canonical.starts_with(&pets_root_canonical) {
                 return Err(format!(
                     "Refusing to replace path outside pet root: {}",
@@ -244,6 +280,82 @@ fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String
 
     let _ = fs::remove_dir_all(&temp_dir);
     imported
+}
+
+#[tauri::command]
+fn send_llm_chat(request: LlmChatRequest) -> Result<LlmChatResponse, String> {
+    let endpoint = request.endpoint.trim();
+    if endpoint.is_empty() {
+        return Err("请先填写接口地址".to_string());
+    }
+
+    let model = request.model.trim();
+    if model.is_empty() {
+        return Err("请先填写模型名称".to_string());
+    }
+
+    let mut messages = Vec::new();
+    let system_prompt = request.system_prompt.trim();
+    if !system_prompt.is_empty() {
+        messages.push(LlmChatMessage {
+            role: "system".to_string(),
+            content: system_prompt.to_string(),
+        });
+    }
+
+    for message in request.messages.into_iter().take(24) {
+        let role = message.role.trim();
+        let content = message.content.trim();
+        if content.is_empty() || !matches!(role, "user" | "assistant") {
+            continue;
+        }
+        messages.push(LlmChatMessage {
+            role: role.to_string(),
+            content: content.to_string(),
+        });
+    }
+
+    if !messages.iter().any(|message| message.role == "user") {
+        return Err("没有可发送的用户消息".to_string());
+    }
+
+    let url = normalize_chat_completion_url(endpoint)?;
+    let payload = ChatCompletionPayload {
+        model: model.to_string(),
+        messages,
+        temperature: request.temperature.clamp(0.0, 2.0),
+    };
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(90))
+        .build()
+        .map_err(|error| error.to_string())?;
+
+    let mut builder = client
+        .post(url)
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .json(&payload);
+    let api_key = request.api_key.trim();
+    if !api_key.is_empty() {
+        builder = builder.bearer_auth(api_key);
+    }
+
+    let response = builder.send().map_err(|error| error.to_string())?;
+    let status = response.status();
+    let body = response.text().map_err(|error| error.to_string())?;
+    if !status.is_success() {
+        return Err(format!("模型接口返回 {status}: {}", shorten_error(&body)));
+    }
+
+    let value: serde_json::Value = serde_json::from_str(&body).map_err(|error| {
+        format!(
+            "模型接口返回的不是有效 JSON: {error}; {}",
+            shorten_error(&body)
+        )
+    })?;
+    extract_chat_content(&value)
+        .map(|content| LlmChatResponse { content })
+        .ok_or_else(|| "没有在模型返回里找到回复文本".to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -275,6 +387,7 @@ pub fn run() {
             apply_pet_window_settings,
             reveal_pet_folder,
             import_pet_from_url,
+            send_llm_chat,
         ])
         .setup(|app| {
             setup_tray(app.handle())?;
@@ -450,7 +563,8 @@ fn read_pet_package(root: &Path) -> Result<PetPackage, String> {
 }
 
 fn extract_pet_zip(bytes: &[u8], destination: &Path) -> Result<PathBuf, String> {
-    let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+    let mut archive =
+        zip::ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
 
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).map_err(|error| error.to_string())?;
@@ -492,7 +606,10 @@ fn find_extracted_pet_dir(root: &Path) -> Result<PathBuf, String> {
         return Ok(candidates.remove(0));
     }
 
-    Err("Imported zip must contain exactly one pet.json at the root or inside one folder".to_string())
+    Err(
+        "Imported zip must contain exactly one pet.json at the root or inside one folder"
+            .to_string(),
+    )
 }
 
 fn copy_dir_all(source: &Path, destination: &Path) -> Result<(), String> {
@@ -561,4 +678,50 @@ fn expand_user_path(value: &str) -> Option<PathBuf> {
     }
 
     Some(PathBuf::from(trimmed))
+}
+
+fn normalize_chat_completion_url(endpoint: &str) -> Result<String, String> {
+    let trimmed = endpoint.trim().trim_end_matches('/');
+    let parsed = reqwest::Url::parse(trimmed).map_err(|error| error.to_string())?;
+    if !matches!(parsed.scheme(), "https" | "http") {
+        return Err("接口地址只支持 http 或 https".to_string());
+    }
+
+    if parsed.path().ends_with("/chat/completions") {
+        return Ok(trimmed.to_string());
+    }
+
+    if parsed.path().ends_with("/v1") {
+        Ok(format!("{trimmed}/chat/completions"))
+    } else {
+        Ok(format!("{trimmed}/v1/chat/completions"))
+    }
+}
+
+fn extract_chat_content(value: &serde_json::Value) -> Option<String> {
+    value
+        .pointer("/choices/0/message/content")
+        .and_then(|content| content.as_str())
+        .or_else(|| {
+            value
+                .pointer("/choices/0/text")
+                .and_then(|content| content.as_str())
+        })
+        .or_else(|| {
+            value
+                .get("output_text")
+                .and_then(|content| content.as_str())
+        })
+        .map(str::trim)
+        .filter(|content| !content.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn shorten_error(body: &str) -> String {
+    const MAX_LEN: usize = 360;
+    let compact = body.split_whitespace().collect::<Vec<_>>().join(" ");
+    if compact.chars().count() <= MAX_LEN {
+        return compact;
+    }
+    compact.chars().take(MAX_LEN).collect::<String>() + "..."
 }

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Bot,
   Download,
   Eye,
   FolderPlus,
   FolderOpen,
   Globe2,
+  KeyRound,
   Lock,
   Maximize2,
+  MessageCircle,
   Move,
   PawPrint,
   Play,
@@ -302,6 +305,14 @@ export function SettingsWindow() {
           title="动作"
         >
           <Play size={20} />
+        </button>
+        <button
+          className="rail-button"
+          type="button"
+          onClick={() => scrollToPanel("chat-section")}
+          title="对话"
+        >
+          <MessageCircle size={20} />
         </button>
         <button
           className="rail-button"
@@ -623,6 +634,79 @@ export function SettingsWindow() {
               value={settings.pixelated}
               onChange={(value) => update("pixelated", value, "渲染方式已更新")}
             />
+          </section>
+
+          <section className="panel llm-panel" id="chat-section">
+            <div className="panel-title">
+              <Bot size={18} />
+              <h2>AI 对话</h2>
+            </div>
+            <ToggleRow
+              label="启用桌宠对话"
+              value={settings.llmChatEnabled}
+              onChange={(value) =>
+                update("llmChatEnabled", value, value ? "对话按钮已显示" : "对话已关闭")
+              }
+            />
+            <p className="panel-note">
+              开启后，桌宠旁会出现对话按钮。接口按 OpenAI 兼容格式请求，本地模型可以不填 Key。
+            </p>
+            <label className="field">
+              <span>接口地址</span>
+              <input
+                type="url"
+                value={settings.llmEndpoint}
+                placeholder="例如 https://api.example.com/v1"
+                onChange={(event) => update("llmEndpoint", event.target.value, "接口已保存")}
+              />
+            </label>
+            <div className="split-fields">
+              <label className="field">
+                <span>模型</span>
+                <input
+                  type="text"
+                  value={settings.llmModel}
+                  placeholder="例如 gpt-4.1-mini / qwen-plus"
+                  onChange={(event) => update("llmModel", event.target.value, "模型已保存")}
+                />
+              </label>
+              <label className="field">
+                <span>
+                  <KeyRound size={13} />
+                  API Key
+                </span>
+                <input
+                  type="password"
+                  value={settings.llmApiKey}
+                  placeholder="本地保存"
+                  onChange={(event) => update("llmApiKey", event.target.value, "Key 已保存")}
+                />
+              </label>
+            </div>
+            <label className="slider-field">
+              <span>温度</span>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.05"
+                value={settings.llmTemperature}
+                onChange={(event) =>
+                  update("llmTemperature", Number(event.target.value), "温度已更新")
+                }
+              />
+              <output>{settings.llmTemperature.toFixed(2)}</output>
+            </label>
+            <label className="field">
+              <span>桌宠口吻</span>
+              <textarea
+                rows={4}
+                value={settings.llmSystemPrompt}
+                onChange={(event) =>
+                  update("llmSystemPrompt", event.target.value, "口吻已保存")
+                }
+              />
+            </label>
           </section>
 
           <section className="panel">
