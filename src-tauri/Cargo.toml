@@ -1,6 +1,6 @@
 [package]
 name = "desktop-pet-launcher"
-version = "0.2.6"
+version = "0.2.7"
 description = "A high-resolution desktop pet launcher"
 authors = ["亡灵 <202405721336@smail.xtu.edu.cn>"]
 edition = "2021"

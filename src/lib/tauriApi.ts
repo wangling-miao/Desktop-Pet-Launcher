@@ -3,6 +3,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import {
   LogicalSize,
   PhysicalPosition,
+  availableMonitors,
   cursorPosition,
   currentMonitor,
   getCurrentWindow,
@@ -86,6 +87,22 @@ export interface MonitorWorkArea {
   scaleFactor: number;
 }
 
+interface WindowPlacement {
+  x: number;
+  y: number;
+}
+
+interface PhysicalWorkArea {
+  position: {
+    x: number;
+    y: number;
+  };
+  size: {
+    width: number;
+    height: number;
+  };
+}
+
 export function isTauriRuntime(): boolean {
   return "__TAURI_INTERNALS__" in window;
 }
@@ -160,12 +177,54 @@ export async function setCurrentWindowGeometry(settings: AppSettings): Promise<v
     return;
   }
   const window = getCurrentWindow();
+  const position = await normalizePetWindowPosition(settings);
   await window.setSize(new LogicalSize(settings.width, settings.height));
-  if (settings.x !== null && settings.y !== null) {
-    await window.setPosition(new PhysicalPosition(Math.round(settings.x), Math.round(settings.y)));
-  }
+  await window.setPosition(new PhysicalPosition(position.x, position.y));
   await window.setAlwaysOnTop(settings.alwaysOnTop);
   await window.setIgnoreCursorEvents(settings.clickThrough);
+}
+
+export async function normalizePetWindowPosition(
+  settings: Pick<AppSettings, "height" | "width" | "x" | "y">,
+): Promise<WindowPlacement> {
+  const fallback = { x: 80, y: 80 };
+  const requested = {
+    x: Number.isFinite(settings.x) ? Math.round(settings.x ?? fallback.x) : fallback.x,
+    y: Number.isFinite(settings.y) ? Math.round(settings.y ?? fallback.y) : fallback.y,
+  };
+  if (!isTauriRuntime()) {
+    return requested;
+  }
+
+  const monitors = await availableMonitors();
+  if (monitors.length === 0) {
+    return requested;
+  }
+
+  const chosen =
+    monitors.find((monitor) => pointInsideWorkArea(requested, monitor.workArea)) ??
+    monitors
+      .map((monitor) => ({
+        monitor,
+        distance: distanceToWorkArea(requested, monitor.workArea),
+      }))
+      .sort((left, right) => left.distance - right.distance)[0]?.monitor ??
+    monitors[0];
+
+  const scaleFactor = chosen.scaleFactor || 1;
+  const windowWidth = Math.round(settings.width * scaleFactor);
+  const windowHeight = Math.round(settings.height * scaleFactor);
+  const margin = Math.round(8 * scaleFactor);
+  const workArea = chosen.workArea;
+  const minX = workArea.position.x + margin;
+  const minY = workArea.position.y + margin;
+  const maxX = workArea.position.x + workArea.size.width - windowWidth - margin;
+  const maxY = workArea.position.y + workArea.size.height - windowHeight - margin;
+
+  return {
+    x: clamp(requested.x, minX, Math.max(minX, maxX)),
+    y: clamp(requested.y, minY, Math.max(minY, maxY)),
+  };
 }
 
 export async function setCurrentWindowClickThrough(enabled: boolean): Promise<void> {
@@ -250,6 +309,33 @@ export async function currentWindowWorkArea(): Promise<MonitorWorkArea | null> {
     height: monitor.workArea.size.height,
     scaleFactor: monitor.scaleFactor,
   };
+}
+
+function pointInsideWorkArea(point: WindowPlacement, workArea: PhysicalWorkArea): boolean {
+  return (
+    point.x >= workArea.position.x &&
+    point.x <= workArea.position.x + workArea.size.width &&
+    point.y >= workArea.position.y &&
+    point.y <= workArea.position.y + workArea.size.height
+  );
+}
+
+function distanceToWorkArea(point: WindowPlacement, workArea: PhysicalWorkArea): number {
+  const clampedX = clamp(
+    point.x,
+    workArea.position.x,
+    workArea.position.x + workArea.size.width,
+  );
+  const clampedY = clamp(
+    point.y,
+    workArea.position.y,
+    workArea.position.y + workArea.size.height,
+  );
+  return Math.hypot(point.x - clampedX, point.y - clampedY);
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.round(Math.min(max, Math.max(min, value)));
 }
 
 export function toAssetUrl(path: string): string {

@@ -90,6 +90,7 @@ export function PetWindow() {
   const petAnchorRef = useRef<{ x: number; y: number } | null>(null);
   const windowOffsetRef = useRef<WindowOffset>({ x: 0, y: 0 });
   const chatHotspotActiveRef = useRef(false);
+  const positionSaveTimerRef = useRef<number | null>(null);
   const dragRef = useRef<{
     pointerId: number;
     startScreenX: number;
@@ -132,6 +133,13 @@ export function PetWindow() {
         await saveSettings(nextSettings);
       }
       await setCurrentWindowGeometry(nextSettings);
+      const appliedAnchor = await captureCurrentPetAnchor();
+      if (appliedAnchor && hasPositionChanged(nextSettings, appliedAnchor)) {
+        const normalizedSettings = { ...nextSettings, ...appliedAnchor };
+        settingsRef.current = normalizedSettings;
+        setSettings(normalizedSettings);
+        await saveSettings(normalizedSettings);
+      }
       setReady(true);
     }
     void boot();
@@ -292,6 +300,40 @@ export function PetWindow() {
     // Window framing depends on saved settings and chat layout state.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatOpen, chatPanelWidth, chatSide, ready, settings.height, settings.width]);
+
+  useEffect(() => {
+    if (!ready || !isTauriRuntime()) {
+      return;
+    }
+
+    let cancelled = false;
+    let unlisten: (() => void) | undefined;
+
+    getCurrentWindow()
+      .onMoved(() => {
+        scheduleCurrentPositionSave();
+      })
+      .then((nextUnlisten) => {
+        if (cancelled) {
+          nextUnlisten();
+          return;
+        }
+        unlisten = nextUnlisten;
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
+      if (positionSaveTimerRef.current !== null) {
+        window.clearTimeout(positionSaveTimerRef.current);
+        positionSaveTimerRef.current = null;
+      }
+      void persistCurrentPetPosition();
+    };
+    // The handlers read current geometry from refs; reattaching for every settings write is unnecessary.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   useEffect(() => {
     let stopped = false;
@@ -579,6 +621,47 @@ export function PetWindow() {
     await setCurrentWindowFrame(targetRenderSize.width, targetRenderSize.height, x, yFrame.y);
   }
 
+  function scheduleCurrentPositionSave(delay = 240) {
+    if (positionSaveTimerRef.current !== null) {
+      window.clearTimeout(positionSaveTimerRef.current);
+    }
+    positionSaveTimerRef.current = window.setTimeout(() => {
+      positionSaveTimerRef.current = null;
+      void persistCurrentPetPosition();
+    }, delay);
+  }
+
+  async function captureCurrentPetAnchor(): Promise<{ x: number; y: number } | null> {
+    const position = await captureCurrentWindowPosition();
+    if (!position) {
+      return null;
+    }
+
+    return {
+      x: Math.round(position.x + windowOffsetRef.current.x),
+      y: Math.round(position.y + windowOffsetRef.current.y),
+    };
+  }
+
+  async function persistCurrentPetPosition() {
+    const petAnchor = await captureCurrentPetAnchor();
+    if (!petAnchor) {
+      return;
+    }
+
+    const current = settingsRef.current;
+    if (!hasPositionChanged(current, petAnchor)) {
+      return;
+    }
+
+    const next = { ...current, ...petAnchor };
+    petAnchorRef.current = petAnchor;
+    settingsRef.current = next;
+    setSettings(next);
+    await saveSettings(next);
+    await notifyPetSettings(next);
+  }
+
   async function handlePointerDown(event: PointerEvent<HTMLElement>) {
     if (event.button !== 0) {
       return;
@@ -816,6 +899,13 @@ export function PetWindow() {
       ) : null}
     </main>
   );
+}
+
+function hasPositionChanged(
+  settings: Pick<AppSettings, "x" | "y">,
+  position: { x: number; y: number },
+): boolean {
+  return Math.round(settings.x ?? Number.NaN) !== position.x || Math.round(settings.y ?? Number.NaN) !== position.y;
 }
 
 function getSpriteFrameTransform(
