@@ -90,6 +90,7 @@ export function PetWindow() {
   const windowOffsetRef = useRef<WindowOffset>({ x: 0, y: 0 });
   const chatHotspotActiveRef = useRef(false);
   const positionSaveTimerRef = useRef<number | null>(null);
+  const positionSaveEnabledAtRef = useRef(0);
   const dragRef = useRef<{
     pointerId: number;
     startScreenX: number;
@@ -131,21 +132,7 @@ export function PetWindow() {
         await saveSettings(nextSettings);
       }
       await setCurrentWindowGeometry(nextSettings);
-      const appliedAnchor = await captureCurrentPetAnchor();
-      if (
-        appliedAnchor &&
-        (hasPositionChanged(nextSettings, appliedAnchor) ||
-          nextSettings.positionCoordinateSpace !== "logical")
-      ) {
-        const normalizedSettings = {
-          ...nextSettings,
-          ...appliedAnchor,
-          positionCoordinateSpace: "logical" as const,
-        };
-        settingsRef.current = normalizedSettings;
-        setSettings(normalizedSettings);
-        await saveSettings(normalizedSettings);
-      }
+      positionSaveEnabledAtRef.current = Date.now() + 1500;
       setReady(true);
     }
     void boot();
@@ -620,6 +607,9 @@ export function PetWindow() {
   }
 
   function scheduleCurrentPositionSave(delay = 240) {
+    if (Date.now() < positionSaveEnabledAtRef.current) {
+      return;
+    }
     if (positionSaveTimerRef.current !== null) {
       window.clearTimeout(positionSaveTimerRef.current);
     }
@@ -642,6 +632,9 @@ export function PetWindow() {
   }
 
   async function persistCurrentPetPosition() {
+    if (Date.now() < positionSaveEnabledAtRef.current) {
+      return;
+    }
     const petAnchor = await captureCurrentPetAnchor();
     if (!petAnchor) {
       return;

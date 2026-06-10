@@ -95,6 +95,17 @@ struct PetWindowSettingsPatch {
     click_through: Option<bool>,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct StartupPetWindowSettings {
+    x: Option<f64>,
+    y: Option<f64>,
+    width: Option<f64>,
+    height: Option<f64>,
+    always_on_top: Option<bool>,
+    click_through: Option<bool>,
+    show_on_startup: bool,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct WindowFrame {
@@ -474,6 +485,7 @@ pub fn run() {
         ])
         .setup(|app| {
             setup_tray(app.handle())?;
+            let _ = restore_pet_window_from_disk(app.handle());
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -577,7 +589,7 @@ fn settings_backup_candidates(app: &AppHandle) -> Vec<PathBuf> {
         }
     }
 
-    let file_names = ["settings.backup.json", "settings.json"];
+    let file_names = ["settings.json", "settings.backup.json"];
     let mut seen = HashSet::new();
     let mut paths = Vec::new();
     for directory in directories {
@@ -686,6 +698,84 @@ fn pet_window<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewWindow<R>, String
         .ok_or_else(|| "Pet window is not available".to_string())
 }
 
+fn restore_pet_window_from_disk(app: &AppHandle) -> Result<(), String> {
+    let window = pet_window(app)?;
+    let startup_settings = read_startup_pet_window_settings(app)?;
+    let fallback_frame = read_window_frame(&window).unwrap_or(WindowFrame {
+        x: 80.0,
+        y: 80.0,
+        width: 192.0,
+        height: 208.0,
+    });
+
+    let (frame, show_on_startup) = if let Some(settings) = startup_settings {
+        if let Some(always_on_top) = settings.always_on_top {
+            let _ = window.set_always_on_top(always_on_top);
+        }
+        if let Some(click_through) = settings.click_through {
+            let _ = window.set_ignore_cursor_events(click_through);
+        }
+
+        (
+            WindowFrame {
+                x: settings.x.unwrap_or(fallback_frame.x),
+                y: settings.y.unwrap_or(fallback_frame.y),
+                width: settings.width.unwrap_or(fallback_frame.width),
+                height: settings.height.unwrap_or(fallback_frame.height),
+            },
+            settings.show_on_startup,
+        )
+    } else {
+        (
+            WindowFrame {
+                x: 80.0,
+                y: 80.0,
+                width: fallback_frame.width,
+                height: fallback_frame.height,
+            },
+            true,
+        )
+    };
+
+    write_window_frame(&window, frame)?;
+    if show_on_startup {
+        window.show().map_err(|error| error.to_string())?;
+    } else {
+        let _ = window.hide();
+    }
+
+    Ok(())
+}
+
+fn read_startup_pet_window_settings(
+    app: &AppHandle,
+) -> Result<Option<StartupPetWindowSettings>, String> {
+    for path in settings_backup_candidates(app) {
+        let Some(settings) = read_settings_from_file(&path) else {
+            continue;
+        };
+
+        return Ok(Some(StartupPetWindowSettings {
+            x: settings.get("x").and_then(serde_json::Value::as_f64),
+            y: settings.get("y").and_then(serde_json::Value::as_f64),
+            width: settings.get("width").and_then(serde_json::Value::as_f64),
+            height: settings.get("height").and_then(serde_json::Value::as_f64),
+            always_on_top: settings
+                .get("alwaysOnTop")
+                .and_then(serde_json::Value::as_bool),
+            click_through: settings
+                .get("clickThrough")
+                .and_then(serde_json::Value::as_bool),
+            show_on_startup: settings
+                .get("showOnStartup")
+                .and_then(serde_json::Value::as_bool)
+                .unwrap_or(true),
+        }));
+    }
+
+    Ok(None)
+}
+
 #[cfg(windows)]
 fn read_window_frame<R: Runtime>(window: &WebviewWindow<R>) -> Result<WindowFrame, String> {
     use windows::Win32::Foundation::RECT;
@@ -783,6 +873,17 @@ fn read_cursor_position<R: Runtime>(
 }
 
 fn window_scale_factor<R: Runtime>(window: &WebviewWindow<R>) -> Result<f64, String> {
+    #[cfg(windows)]
+    {
+        use windows::Win32::UI::HiDpi::GetDpiForWindow;
+
+        let hwnd = window.hwnd().map_err(|error| error.to_string())?;
+        let dpi = unsafe { GetDpiForWindow(hwnd) };
+        if dpi > 0 {
+            return Ok(dpi as f64 / 96.0);
+        }
+    }
+
     let scale_factor = window.scale_factor().map_err(|error| error.to_string())?;
     if scale_factor.is_finite() && scale_factor > 0.0 {
         Ok(scale_factor)
