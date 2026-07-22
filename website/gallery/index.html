@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Desktop Pet Launcher 桌宠图鉴，浏览并下载社区投稿的 Codex / hatch-pet 兼容桌宠包。"
+      content="Desktop Pet Launcher 桌宠图鉴，浏览、筛选并下载社区投稿的 Codex / hatch-pet 兼容桌宠包。"
     />
     <link rel="canonical" href="https://pet.nether.top/gallery/" />
-    <meta name="theme-color" content="#111419" />
+    <meta name="theme-color" content="#f5f7fb" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Desktop Pet Launcher" />
     <meta property="og:title" content="桌宠图鉴 - Desktop Pet Launcher" />
     <meta
       property="og:description"
-      content="浏览、下载、复制导入链接。Desktop Pet Launcher 的社区桌宠图鉴。"
+      content="浏览社区桌宠、按名称和清晰度筛选，一键下载或复制启动器导入链接。"
     />
     <meta property="og:url" content="https://pet.nether.top/gallery/" />
     <meta property="og:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
@@ -24,99 +24,284 @@
     <meta name="twitter:title" content="桌宠图鉴 - Desktop Pet Launcher" />
     <meta
       name="twitter:description"
-      content="浏览、下载、复制导入链接。Desktop Pet Launcher 的社区桌宠图鉴。"
+      content="浏览、筛选、下载，也可以复制链接直接导入 Desktop Pet Launcher。"
     />
     <meta name="twitter:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
     <title>桌宠图鉴 - Desktop Pet Launcher</title>
     <link rel="icon" href="../assets/desktop-pet-launcher-icon.png" />
-    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="../landing.css" />
+    <link rel="stylesheet" href="../gallery.css" />
   </head>
-  <body class="gallery-page">
-    <main>
-      <section class="gallery-catalog" aria-label="桌宠图鉴">
-        <nav class="nav" aria-label="主导航">
-          <a class="brand" href="../">
+  <body class="landing-page gallery-page">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
+
+    <header class="site-header">
+      <nav class="site-nav" aria-label="主导航">
+        <a class="site-brand" href="../#top" aria-label="Desktop Pet Launcher 首页">
+          <span class="site-brand__icon">
             <img src="../assets/desktop-pet-launcher-icon.png" alt="" />
-            <span>Desktop Pet Launcher</span>
-          </a>
-          <div class="nav-links">
-            <a href="../#features">特性</a>
-            <a href="../#codex">Codex 兼容</a>
+          </span>
+          <span class="site-brand__text">
+            <strong>Desktop Pet</strong>
+            <small>Launcher</small>
+          </span>
+        </a>
+
+        <div class="site-nav__links" aria-label="页面导航">
+          <a href="../#features">功能</a>
+          <a href="./" aria-current="page">桌宠图鉴</a>
+          <a href="../#compatibility">兼容性</a>
+          <a href="../#download">下载</a>
+        </div>
+
+        <a class="nav-github" href="https://github.com/wangling-miao/awesome-desktop-pets">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+            />
+          </svg>
+          <span>图鉴仓库</span>
+        </a>
+
+        <details class="mobile-menu">
+          <summary aria-label="打开导航菜单">
+            <span></span><span></span><span></span>
+          </summary>
+          <div class="mobile-menu__panel">
+            <a href="../#features">功能</a>
+            <a href="./" aria-current="page">桌宠图鉴</a>
+            <a href="../#compatibility">兼容性</a>
             <a href="../#download">下载</a>
-            <a class="github-button" href="https://github.com/wangling-miao/awesome-desktop-pets">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
-                />
-              </svg>
-              图鉴仓库
-            </a>
+            <a href="https://github.com/wangling-miao/awesome-desktop-pets">图鉴仓库</a>
           </div>
-        </nav>
+        </details>
+      </nav>
+    </header>
 
-        <header class="gallery-heading">
-          <div>
-            <p class="eyebrow">Pet Gallery</p>
-            <h1>桌宠图鉴</h1>
-            <p>
-              浏览、下载、复制导入链接。数据来自 `awesome-desktop-pets`，合并 PR 后会自动出现在这里。
+    <main id="main-content">
+      <section class="gallery-hero" id="top" aria-labelledby="gallery-title">
+        <span class="gallery-hero__orb gallery-hero__orb--mint" aria-hidden="true"></span>
+        <span class="gallery-hero__orb gallery-hero__orb--lilac" aria-hidden="true"></span>
+
+        <div class="section-shell gallery-hero__layout">
+          <div class="gallery-hero__copy">
+            <p class="hero-kicker">
+              <span class="hero-kicker__dot" aria-hidden="true"></span>
+              Community pet library
             </p>
-          </div>
-          <div class="gallery-heading-actions">
-            <a class="primary-action" href="../#download">下载启动器</a>
-            <a class="secondary-action" href="https://github.com/wangling-miao/awesome-desktop-pets">
-              投稿桌宠
-            </a>
-          </div>
-        </header>
+            <h1 id="gallery-title">找到一只喜欢的，<em>留在桌面一角。</em></h1>
+            <p class="gallery-hero__lede">
+              浏览社区制作的桌宠包，按名称、作者、标签和素材倍率筛选。下载压缩包，或复制链接直接交给
+              Desktop Pet Launcher 导入。
+            </p>
 
-        <section class="gallery-browser">
-          <aside class="gallery-sidebar" aria-label="图鉴筛选">
-            <div class="source-card">
-              <span>索引源</span>
-              <strong>awesome-desktop-pets</strong>
-              <p data-gallery-status>正在读取桌宠图鉴...</p>
-            </div>
-            <label class="gallery-search">
-              <span>搜索桌宠</span>
-              <input data-gallery-search type="search" placeholder="名称、作者、标签" />
-            </label>
-            <div class="gallery-filter-note">
-              <span>投稿方式</span>
-              <p>Fork 仓库，在 `pets/` 下新增目录，Actions 校验通过后合并。</p>
-              <a href="https://github.com/wangling-miao/awesome-desktop-pets/blob/main/CONTRIBUTING.md">
-                查看投稿指南 →
+            <div class="gallery-hero__actions">
+              <a class="button button--primary" href="#catalog">
+                浏览全部桌宠
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v11m0 0 4-4m-4 4-4-4" /></svg>
+              </a>
+              <a class="button button--secondary" href="https://github.com/wangling-miao/awesome-desktop-pets/blob/main/CONTRIBUTING.md">
+                投稿自己的桌宠
               </a>
             </div>
-          </aside>
 
-          <section class="gallery-results">
-            <div class="gallery-results-head">
+            <dl class="gallery-hero__stats" aria-label="图鉴状态">
               <div>
-                <span>可下载桌宠</span>
-                <strong data-gallery-count>0</strong>
+                <dt>已收录</dt>
+                <dd><strong data-gallery-total>--</strong><span>只桌宠</span></dd>
               </div>
-              <a href="https://github.com/wangling-miao/awesome-desktop-pets">打开图鉴仓库 →</a>
+              <div>
+                <dt>兼容格式</dt>
+                <dd><strong>1x–4x</strong><span>高清素材</span></dd>
+              </div>
+              <div>
+                <dt>索引状态</dt>
+                <dd><strong data-gallery-updated>同步中</strong><span>自动更新</span></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="gallery-showcase" aria-label="图鉴桌宠预览">
+            <span class="gallery-showcase__shadow" aria-hidden="true"></span>
+            <div class="gallery-showcase__window">
+              <div class="gallery-showcase__bar">
+                <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <strong>Pet Gallery</strong>
+                <span class="gallery-showcase__online"><i></i> Live index</span>
+              </div>
+              <div class="gallery-showcase__body" data-gallery-featured aria-live="polite" aria-busy="true">
+                <div class="gallery-showcase__heading">
+                  <span>社区精选</span>
+                  <strong>正在加载…</strong>
+                </div>
+                <div class="gallery-showcase__cards gallery-showcase__cards--loading" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+              </div>
             </div>
-            <div class="gallery-grid" data-gallery-grid aria-live="polite"></div>
-          </section>
-        </section>
+            <div class="gallery-floating-note gallery-floating-note--import">
+              <span aria-hidden="true">↗</span>
+              <div><small>Launcher ready</small><strong>复制链接即可导入</strong></div>
+            </div>
+            <div class="gallery-floating-note gallery-floating-note--quality">
+              <span aria-hidden="true">4×</span>
+              <div><small>HiDPI assets</small><strong>高清素材优先</strong></div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section class="submit-band">
-        <div>
-          <p>Contribute</p>
-          <h2>想让自己的桌宠出现在这里？</h2>
-          <p>
-            在 `pets/` 下新建目录，提交 `pet.json`、预览图、README 和 LICENSE。
-            GitHub Actions 会自动校验并生成图鉴索引。
-          </p>
+      <section class="gallery-library" id="catalog" aria-labelledby="catalog-title">
+        <div class="section-shell">
+          <header class="gallery-section-heading">
+            <div>
+              <p class="section-kicker">Browse the collection</p>
+              <h2 id="catalog-title">桌宠收藏库</h2>
+            </div>
+            <p>
+              图鉴数据来自 <code>awesome-desktop-pets</code>。投稿合并后会自动生成索引，无需手动维护页面。
+            </p>
+          </header>
+
+          <div class="gallery-explorer">
+            <div class="gallery-toolbar" aria-label="图鉴筛选工具">
+              <label class="gallery-search-field">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" /><path d="m13 13 4 4" /></svg>
+                <span class="sr-only">搜索桌宠</span>
+                <input
+                  data-gallery-search
+                  type="search"
+                  autocomplete="off"
+                  placeholder="搜索名称、作者或标签"
+                  aria-label="搜索名称、作者或标签"
+                />
+                <kbd aria-hidden="true">/</kbd>
+              </label>
+
+              <div class="gallery-filter-group" role="group" aria-label="按素材倍率筛选">
+                <button type="button" class="is-active" data-gallery-filter="all" aria-pressed="true">
+                  全部 <small data-gallery-filter-count="all">0</small>
+                </button>
+                <button type="button" data-gallery-filter="1x" aria-pressed="false">
+                  1x <small data-gallery-filter-count="1x">0</small>
+                </button>
+                <button type="button" data-gallery-filter="2x" aria-pressed="false">
+                  2x <small data-gallery-filter-count="2x">0</small>
+                </button>
+                <button type="button" data-gallery-filter="4x" aria-pressed="false">
+                  4x <small data-gallery-filter-count="4x">0</small>
+                </button>
+              </div>
+
+              <label class="gallery-sort-field">
+                <span>排序</span>
+                <select data-gallery-sort aria-label="桌宠排序方式">
+                  <option value="newest">最近收录</option>
+                  <option value="name">名称 A–Z</option>
+                  <option value="size">文件大小</option>
+                </select>
+              </label>
+
+              <button class="gallery-reset" type="button" data-gallery-reset disabled>重置</button>
+            </div>
+
+            <div class="gallery-results-head">
+              <div class="gallery-index-state">
+                <i aria-hidden="true"></i>
+                <span data-gallery-status>正在读取社区图鉴索引…</span>
+              </div>
+              <div class="gallery-results-summary">
+                <strong data-gallery-count>0</strong>
+                <span>个结果</span>
+              </div>
+              <a href="https://github.com/wangling-miao/awesome-desktop-pets">
+                打开图鉴仓库
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6m0 0H8m6 0v6" /></svg>
+              </a>
+            </div>
+
+            <div class="gallery-grid" data-gallery-grid aria-live="polite" aria-busy="true">
+              <article class="pet-card pet-card--skeleton" aria-hidden="true"><span></span><i></i><i></i><i></i></article>
+              <article class="pet-card pet-card--skeleton" aria-hidden="true"><span></span><i></i><i></i><i></i></article>
+              <article class="pet-card pet-card--skeleton" aria-hidden="true"><span></span><i></i><i></i><i></i></article>
+            </div>
+
+            <div class="gallery-empty" data-gallery-empty hidden>
+              <span class="gallery-empty__icon" aria-hidden="true">⌕</span>
+              <h3>没有找到匹配的桌宠</h3>
+              <p>换一个关键词，或者清除倍率筛选后再看看。</p>
+              <button class="button button--secondary" type="button" data-gallery-reset>清除筛选</button>
+            </div>
+          </div>
         </div>
-        <a class="primary-action" href="https://github.com/wangling-miao/awesome-desktop-pets/blob/main/CONTRIBUTING.md">
-          查看投稿指南
-        </a>
+      </section>
+
+      <section class="gallery-import" aria-labelledby="import-title">
+        <div class="section-shell gallery-import__inner">
+          <header>
+            <p class="section-kicker">From gallery to desktop</p>
+            <h2 id="import-title">三步把桌宠带回桌面</h2>
+            <p>下载文件适合离线保存；复制导入链接则更快，启动器会直接读取并安装宠物包。</p>
+          </header>
+          <ol class="gallery-import__steps">
+            <li>
+              <span>01</span>
+              <div><strong>挑选桌宠</strong><p>使用搜索、标签与倍率快速定位喜欢的角色。</p></div>
+            </li>
+            <li>
+              <span>02</span>
+              <div><strong>下载或复制链接</strong><p>保留压缩包，或者一键复制远端导入地址。</p></div>
+            </li>
+            <li>
+              <span>03</span>
+              <div><strong>在启动器中导入</strong><p>打开设置页选择宠物包，让它出现在桌面边缘。</p></div>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="gallery-submit" aria-labelledby="submit-title">
+        <div class="section-shell gallery-submit__card">
+          <div class="gallery-submit__copy">
+            <p class="section-kicker">Contribute to the collection</p>
+            <h2 id="submit-title">让你制作的桌宠，也出现在这里。</h2>
+            <p>
+              在 <code>pets/</code> 下提交宠物目录。GitHub Actions 会校验清单、预览、授权信息与下载包，合并后自动更新图鉴。
+            </p>
+            <div class="gallery-submit__actions">
+              <a class="button button--primary" href="https://github.com/wangling-miao/awesome-desktop-pets/blob/main/CONTRIBUTING.md">
+                查看投稿指南
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 14 14 6m0 0H8m6 0v6" /></svg>
+              </a>
+              <a class="button button--secondary" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
+                使用桌宠制作 Skill
+              </a>
+            </div>
+          </div>
+          <div class="gallery-submit__checklist" aria-label="投稿内容清单">
+            <span><i>✓</i><strong>pet.json</strong><small>动作与尺寸清单</small></span>
+            <span><i>✓</i><strong>preview.webp</strong><small>图鉴展示预览</small></span>
+            <span><i>✓</i><strong>README + LICENSE</strong><small>说明与授权信息</small></span>
+          </div>
+        </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="section-shell site-footer__inner">
+        <a class="site-brand site-brand--footer" href="#top">
+          <span class="site-brand__icon"><img src="../assets/desktop-pet-launcher-icon.png" alt="" /></span>
+          <span class="site-brand__text"><strong>Desktop Pet</strong><small>Launcher</small></span>
+        </a>
+        <p>社区桌宠收藏库。下载、导入，也欢迎把自己的作品分享出来。</p>
+        <div class="site-footer__links">
+          <a href="../">返回首页</a>
+          <a href="https://github.com/wangling-miao/awesome-desktop-pets">图鉴仓库</a>
+          <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/issues">反馈问题</a>
+        </div>
+      </div>
+    </footer>
+
     <script src="../app.js"></script>
   </body>
 </html>
