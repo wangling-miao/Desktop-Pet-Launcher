@@ -8,13 +8,13 @@
       content="Desktop Pet Launcher 是一个开源高清桌宠启动器，兼容 Codex / hatch-pet 桌宠包，支持透明置顶、托盘、设置页、自定义宠物文件夹、4x 高清素材和可选 AI 对话。"
     />
     <link rel="canonical" href="https://pet.nether.top/" />
-    <meta name="theme-color" content="#111419" />
+    <meta name="theme-color" content="#f4f7fb" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Desktop Pet Launcher" />
-    <meta property="og:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
+    <meta property="og:title" content="Desktop Pet Launcher - 把喜欢的角色留在桌面一角" />
     <meta
       property="og:description"
-      content="透明置顶、托盘控制、桌宠图鉴、AI 对话可选、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+      content="跨平台、开源、支持透明置顶与自定义宠物包的高清桌宠启动器。"
     />
     <meta property="og:url" content="https://pet.nether.top/" />
     <meta property="og:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
@@ -24,343 +24,510 @@
     <meta name="twitter:title" content="Desktop Pet Launcher - 高清桌宠启动器" />
     <meta
       name="twitter:description"
-      content="透明置顶、托盘控制、桌宠图鉴、AI 对话可选、Codex / hatch-pet 兼容的开源高清桌宠启动器。"
+      content="透明置顶、托盘控制、桌宠图鉴、AI 对话可选、Codex / hatch-pet 兼容。"
     />
     <meta name="twitter:image" content="https://pet.nether.top/assets/desktop-pet-launcher-og.png" />
     <title>Desktop Pet Launcher</title>
     <link rel="icon" href="assets/desktop-pet-launcher-icon.png" />
     <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="landing.css" />
   </head>
-  <body>
-    <main>
-      <section class="hero" aria-label="Desktop Pet Launcher">
-        <div class="hero-scene" aria-hidden="true">
-          <div class="scene-grid"></div>
-          <div class="desktop-preview">
-            <div class="preview-topbar">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-            <div class="preview-body">
-              <div class="pet-window">
-                <img src="assets/desktop-pet-launcher-icon.png" alt="" />
-              </div>
-              <div class="settings-panel">
-                <span>设置</span>
-                <strong>大小 320 px</strong>
-                <i></i>
-                <strong>宠物文件夹</strong>
-                <small>Codex / hatch-pet 兼容</small>
-              </div>
-              <div class="ai-chat-preview">
-                <span>AI 对话</span>
-                <strong>你好，我在桌面边上。</strong>
-              </div>
-              <div class="tray-menu">
-                <span>托盘菜单</span>
-                <strong>显示 / 隐藏</strong>
-                <strong>设置</strong>
-                <strong>退出</strong>
-              </div>
-            </div>
-          </div>
-        </div>
+  <body class="landing-page">
+    <a class="skip-link" href="#main-content">跳到主要内容</a>
 
-        <nav class="nav" aria-label="主导航">
-          <a class="brand" href="#">
+    <header class="site-header">
+      <nav class="site-nav" aria-label="主导航">
+        <a class="site-brand" href="#top" aria-label="Desktop Pet Launcher 首页">
+          <span class="site-brand__icon">
             <img src="assets/desktop-pet-launcher-icon.png" alt="" />
-            <span>Desktop Pet Launcher</span>
-          </a>
-          <div class="nav-links">
-            <a href="#features">特性</a>
+          </span>
+          <span class="site-brand__text">
+            <strong>Desktop Pet</strong>
+            <small>Launcher</small>
+          </span>
+        </a>
+
+        <div class="site-nav__links" aria-label="页面导航">
+          <a href="#features">功能</a>
+          <a href="gallery/">桌宠图鉴</a>
+          <a href="#compatibility">兼容性</a>
+          <a href="#download">下载</a>
+        </div>
+
+        <a class="nav-github" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
+            />
+          </svg>
+          <span>GitHub</span>
+        </a>
+
+        <details class="mobile-menu">
+          <summary aria-label="打开导航菜单">
+            <span></span><span></span><span></span>
+          </summary>
+          <div class="mobile-menu__panel">
+            <a href="#features">功能</a>
             <a href="gallery/">桌宠图鉴</a>
-            <a href="#codex">Codex 兼容</a>
+            <a href="#compatibility">兼容性</a>
             <a href="#download">下载</a>
-            <a class="github-button" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
-                />
-              </svg>
-              GitHub
-            </a>
+            <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher">GitHub 仓库</a>
           </div>
-        </nav>
+        </details>
+      </nav>
+    </header>
 
-        <div class="hero-copy">
-          <p class="eyebrow">开源高清桌宠启动器</p>
-          <h1>
-            <span>高清桌宠，</span>
-            <span>安静住在桌面上。</span>
-          </h1>
-          <p class="lede">
-            Desktop Pet Launcher 用 Tauri 2 构建，支持透明无边框桌宠窗口、托盘控制、
-            自定义宠物文件夹、开机自启、可选 AI 对话和 4x 高清宠物包。旧的 Codex / hatch-pet 宠物包也可以继续用。
-          </p>
-          <div class="hero-actions">
-            <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
-              下载最新版
-            </a>
-            <a class="secondary-action" href="gallery/">浏览桌宠图鉴</a>
-            <a class="secondary-action github-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path
-                  d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.4 0-.2-.01-.85-.01-1.54-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.96-.82-1.15-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.51-1.1-1.78-.21-3.64-.91-3.64-4.03 0-.89.31-1.62.82-2.19-.08-.21-.36-1.04.08-2.16 0 0 .67-.22 2.2.84A7.42 7.42 0 0 1 8 3.96c.68 0 1.36.09 2 .28 1.53-1.06 2.2-.84 2.2-.84.44 1.12.16 1.95.08 2.16.51.57.82 1.3.82 2.19 0 3.13-1.87 3.82-3.65 4.03.29.26.54.76.54 1.54 0 1.1-.01 1.99-.01 2.26 0 .22.15.48.55.4A8.18 8.18 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"
-                />
-              </svg>
-              Star on GitHub
-            </a>
-          </div>
-          <div class="repo-badges" aria-label="项目状态">
-            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/stargazers">
-              <span>Stars</span>
-              <strong data-stars>Star</strong>
-            </a>
-            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
-              <span>Latest</span>
-              <strong data-latest-release>Release</strong>
-            </a>
-            <a class="repo-pill" href="https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/release.yml">
-              <span>Release</span>
-              <strong>全平台安装包</strong>
-            </a>
-          </div>
-          <div class="hero-tags" aria-label="能力标签">
-            <span>透明置顶</span>
-            <span>托盘菜单</span>
-            <span>自定义文件夹</span>
-            <span>AI 对话可选</span>
-            <span>Codex 桌宠兼容</span>
-            <span>4x 高清包</span>
-          </div>
-        </div>
-      </section>
+    <main id="main-content">
+      <section class="landing-hero" id="top">
+        <div class="hero-glow hero-glow--one" aria-hidden="true"></div>
+        <div class="hero-glow hero-glow--two" aria-hidden="true"></div>
 
-      <section class="quick-links" aria-label="项目入口">
-        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
-          <span>Launcher 仓库</span>
-          <strong>源码与安装包</strong>
-          <p>查看应用源码、提交 Issue、下载历史版本。</p>
-          <em>打开仓库 →</em>
-        </a>
-        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
-          <span>Desktop Pet Skill</span>
-          <strong>制作高清宠物包</strong>
-          <p>给 Codex 使用的生成、校验、导入和打包流程。</p>
-          <em>打开 Skill →</em>
-        </a>
-        <a href="gallery/">
-          <span>Pet Gallery</span>
-          <strong>浏览社区桌宠</strong>
-          <p>从桌宠图鉴下载宠物包，也可以复制链接到启动器导入。</p>
-          <em>打开图鉴 →</em>
-        </a>
-        <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
-          <span>Latest Release</span>
-          <strong>下载最新版</strong>
-          <p>Windows、macOS、Linux 安装包都在这里。</p>
-          <em>前往下载 →</em>
-        </a>
-      </section>
+        <div class="hero-layout">
+          <div class="hero-copy-new">
+            <div class="hero-kicker">
+              <span class="hero-kicker__dot"></span>
+              开源 · 跨平台 · 本地优先
+            </div>
 
-      <section class="feature-band" id="features">
-        <div class="section-heading">
-          <p>Launcher</p>
-          <h2>桌宠体验，装进一个轻量启动器。</h2>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <span>01</span>
-            <h3>真正像桌宠</h3>
-            <p>透明无边框、跳过任务栏、可置顶，也能在托盘里显示、隐藏、锁定和退出。</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h3>位置和大小可控</h3>
-            <p>拖动后保存位置，设置页可调整宽高、动画速度、点击穿透和开机自启。</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h3>宠物来源不受限</h3>
-            <p>默认扫描 Codex 宠物目录，也可以添加自己的本地文件夹作为宠物包库。</p>
-          </article>
-          <article>
-            <span>04</span>
-            <h3>高清素材优先</h3>
-            <p>根据窗口尺寸和屏幕倍率选择 1x、2x 或 4x atlas，放大后尽量保持清晰。</p>
-          </article>
-          <article>
-            <span>05</span>
-            <h3>想聊再打开</h3>
-            <p>AI 对话默认关闭。自己填接口地址、模型和 Key 后，桌宠旁才会出现对话按钮。</p>
-          </article>
-        </div>
-      </section>
+            <h1>把喜欢的角色，<br /><em>留在桌面一角。</em></h1>
+            <p class="hero-lede">
+              一个轻量、高清、可自由扩展的桌宠启动器。透明置顶、托盘控制、
+              自定义宠物包与可选 AI 对话，都装进一个安静的小窗口里。
+            </p>
 
-      <section class="ai-band" id="ai-chat">
-        <div class="ai-card">
-          <span>Optional LLM chat</span>
-          <h2>不配置就安静陪着，想聊天时再接入模型。</h2>
-          <p>
-            在设置页填 OpenAI 兼容接口 URL、模型和 Key。桌宠会在旁边展开对话气泡，
-            气泡颜色从当前宠物素材自动取色；输入、请求、结果和失败会切换到对应动作。
-          </p>
-        </div>
-        <div class="ai-steps" aria-label="AI 对话步骤">
-          <div>
-            <strong>01</strong>
-            <span>开启 AI 对话</span>
-          </div>
-          <div>
-            <strong>02</strong>
-            <span>填写 URL / Key / 模型</span>
-          </div>
-          <div>
-            <strong>03</strong>
-            <span>从桌宠旁边开始聊天</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="codex-band" id="codex">
-        <div class="codex-copy">
-          <p>Codex compatible</p>
-          <h2>兼容现有 Codex 桌宠，也给高清新包留足空间。</h2>
-          <p>
-            旧版 hatch-pet 包可以继续使用：pet.json、spritesheet.webp、192 x 208 cell、
-            1536 x 1872 atlas 都保持兼容。新的 desktop-pet skill 会优先制作 4x master，
-            再导出 2x 和 1x，让桌宠不是从小图硬拉大。
-          </p>
-          <div class="codex-actions">
-            <a class="primary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
-              打开 Skill 仓库
-            </a>
-            <a class="secondary-action dark" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
-              打开 Launcher 仓库
-            </a>
-          </div>
-        </div>
-        <div class="contract-table" role="table" aria-label="宠物包尺寸">
-          <div role="row">
-            <strong role="cell">倍率</strong>
-            <strong role="cell">单帧</strong>
-            <strong role="cell">图集</strong>
-          </div>
-          <div role="row">
-            <span role="cell">1x 兼容</span>
-            <span role="cell">192 x 208</span>
-            <span role="cell">1536 x 1872</span>
-          </div>
-          <div role="row">
-            <span role="cell">2x 可选</span>
-            <span role="cell">384 x 416</span>
-            <span role="cell">3072 x 3744</span>
-          </div>
-          <div role="row">
-            <span role="cell">4x 高清</span>
-            <span role="cell">768 x 832</span>
-            <span role="cell">6144 x 7488</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="download-band" id="download">
-        <div class="download-copy">
-          <p>Download</p>
-          <h2>下载最新版，开始放一只桌宠在屏幕边上。</h2>
-          <p>
-            选择你的系统，下载推荐安装包。安装完成后从托盘打开设置，
-            就能导入桌宠图鉴或本地宠物包。
-          </p>
-        </div>
-        <div class="download-card-grid" aria-label="系统下载">
-          <article class="download-card">
-            <span>Windows</span>
-            <h3>推荐 setup.exe</h3>
-            <p>适合大多数 Windows 10/11 用户，双击安装即可。企业或静默部署场景可选 MSI。</p>
-            <a
-              class="primary-action"
-              href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-              data-release-asset="windows-setup"
-            >
-              下载 Windows 安装器
-            </a>
-            <div class="download-alt-links">
+            <div class="hero-buttons">
               <a
+                class="button button--primary"
+                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                data-release-page
+              >
+                <span>下载最新版</span>
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" />
+                </svg>
+              </a>
+              <a class="button button--secondary" href="gallery/">
+                浏览桌宠图鉴
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M5 10h10m0 0-4-4m4 4-4 4" />
+                </svg>
+              </a>
+            </div>
+
+            <div class="hero-meta" aria-label="项目状态">
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/stargazers">
+                <span>GitHub</span>
+                <strong data-stars>开源项目</strong>
+              </a>
+              <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">
+                <span>当前版本</span>
+                <strong data-latest-release>Latest</strong>
+              </a>
+              <div>
+                <span>平台</span>
+                <strong>Win · macOS · Linux</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-showcase" aria-label="Desktop Pet Launcher 产品预览">
+            <div class="showcase-shadow" aria-hidden="true"></div>
+            <div class="app-window">
+              <div class="app-window__bar">
+                <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+                <span>Desktop Pet Launcher</span>
+                <div class="window-status"><i></i> Running</div>
+              </div>
+
+              <div class="app-window__body">
+                <aside class="preview-sidebar" aria-hidden="true">
+                  <div class="preview-brand-mark">
+                    <img src="assets/desktop-pet-launcher-icon.png" alt="" />
+                  </div>
+                  <span class="preview-nav-item is-active"></span>
+                  <span class="preview-nav-item"></span>
+                  <span class="preview-nav-item"></span>
+                  <span class="preview-nav-item preview-nav-item--bottom"></span>
+                </aside>
+
+                <div class="preview-canvas">
+                  <div class="preview-topline">
+                    <div>
+                      <span>Your companion</span>
+                      <strong>Venti</strong>
+                    </div>
+                    <button type="button" tabindex="-1" aria-hidden="true">在线</button>
+                  </div>
+
+                  <div class="pet-stage">
+                    <div class="pet-orbit" aria-hidden="true">
+                      <span></span><span></span><span></span>
+                    </div>
+                    <div class="pet-window hero-pet">
+                      <img src="assets/desktop-pet-launcher-icon.png" alt="桌宠预览" />
+                    </div>
+                    <div class="chat-bubble">
+                      <small>AI 对话 · 可选</small>
+                      <p>今天也一起专注吧。</p>
+                    </div>
+                  </div>
+
+                  <div class="preview-controls" aria-hidden="true">
+                    <div>
+                      <span>尺寸</span>
+                      <strong>320 px</strong>
+                      <i><b></b></i>
+                    </div>
+                    <div>
+                      <span>置顶</span>
+                      <strong>已开启</strong>
+                      <em></em>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="floating-card floating-card--tray">
+              <span class="floating-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 8h14M5 12h14M5 16h8" />
+                </svg>
+              </span>
+              <div><small>托盘控制</small><strong>随时显示 / 隐藏</strong></div>
+            </div>
+
+            <div class="floating-card floating-card--quality">
+              <span class="floating-icon floating-icon--warm">4×</span>
+              <div><small>高清素材</small><strong>按屏幕倍率加载</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-trust" aria-label="核心能力">
+          <span><i></i>透明无边框</span>
+          <span><i></i>开机自启</span>
+          <span><i></i>本地宠物包</span>
+          <span><i></i>Codex 兼容</span>
+          <span><i></i>AI 对话可选</span>
+        </div>
+      </section>
+
+      <section class="feature-section" id="features">
+        <div class="section-shell">
+          <div class="section-intro section-intro--split">
+            <div>
+              <p class="section-kicker">Built for companionship</p>
+              <h2>不打扰工作，<br />但一直都在。</h2>
+            </div>
+            <p class="section-description">
+              从桌面窗口到宠物包管理，每个细节都围绕“轻量、安静、可控”设计。
+              默认不联网，不需要账号，也不会把一个可爱桌宠做成复杂的控制中心。
+            </p>
+          </div>
+
+          <div class="bento-grid">
+            <article class="bento-card bento-card--large bento-card--dark">
+              <div class="bento-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="14" rx="3" />
+                  <path d="M8 21h8M12 18v3" />
+                </svg>
+              </div>
+              <div class="bento-card__copy">
+                <span>01 · Desktop native</span>
+                <h3>真正住在桌面上的小伙伴</h3>
+                <p>透明无边框、跳过任务栏、可置顶，也能从托盘快速锁定、隐藏或退出。</p>
+              </div>
+              <div class="mini-desktop" aria-hidden="true">
+                <div class="mini-desktop__window"><i></i><i></i><i></i></div>
+                <div class="mini-desktop__pet">
+                  <img src="assets/desktop-pet-launcher-icon.png" alt="" />
+                </div>
+                <div class="mini-desktop__dock"><span></span><span></span><span></span><span></span></div>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--mint">
+              <div class="bento-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16v10H4zM8 20h8M12 17v3" />
+                </svg>
+              </div>
+              <span>02 · Cross platform</span>
+              <h3>三个系统，体验一致</h3>
+              <p>Windows、macOS、Linux 都有原生安装包，配置和宠物包结构保持统一。</p>
+              <div class="platform-row" aria-label="支持的平台"><b>WIN</b><b>MAC</b><b>LINUX</b></div>
+            </article>
+
+            <article class="bento-card bento-card--cream">
+              <div class="bento-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 7.5h7l2 2h9v9.5H3z" />
+                  <path d="M3 7.5V5h7l2 2h9v2.5" />
+                </svg>
+              </div>
+              <span>03 · Your collection</span>
+              <h3>宠物来源不受限</h3>
+              <p>扫描 Codex 默认目录，也能添加任意本地文件夹，随时切换自己的角色收藏。</p>
+              <div class="folder-stack" aria-hidden="true"><i></i><i></i><i></i></div>
+            </article>
+
+            <article class="bento-card bento-card--wide bento-card--soft">
+              <div class="bento-card__content-row">
+                <div>
+                  <div class="bento-card__icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 5h14v11H9l-4 3z" />
+                      <path d="M8 9h8M8 12h5" />
+                    </svg>
+                  </div>
+                  <span>04 · Optional AI</span>
+                  <h3>想聊时再接入模型</h3>
+                  <p>AI 对话默认关闭。填入 OpenAI 兼容接口后，桌宠才会出现聊天入口。</p>
+                </div>
+                <div class="conversation-demo" aria-hidden="true">
+                  <div class="conversation-demo__pet">
+                    <img src="assets/desktop-pet-launcher-icon.png" alt="" />
+                  </div>
+                  <div class="conversation-demo__bubble"><span></span><span></span><span></span></div>
+                </div>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--coral">
+              <div class="bento-card__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 3v18M3 12h18" />
+                  <circle cx="12" cy="12" r="7" />
+                </svg>
+              </div>
+              <span>05 · Hi-DPI ready</span>
+              <h3>放大也尽量清晰</h3>
+              <p>根据窗口尺寸和屏幕倍率自动选择 1×、2× 或 4× 图集。</p>
+              <strong class="resolution-mark">1× · 2× · 4×</strong>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="gallery-callout">
+        <div class="section-shell gallery-callout__inner">
+          <div class="gallery-copy">
+            <p class="section-kicker">Pet gallery</p>
+            <h2>先逛图鉴，<br />再领一只回桌面。</h2>
+            <p>
+              浏览社区桌宠、查看分辨率和授权信息，一键下载宠物包，
+              或复制链接直接导入 Launcher。
+            </p>
+            <a class="text-link" href="gallery/">
+              打开桌宠图鉴
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m0 0-4-4m4 4-4 4" /></svg>
+            </a>
+          </div>
+
+          <div class="gallery-preview" aria-hidden="true">
+            <div class="gallery-preview__top"><span></span><span></span><span></span></div>
+            <div class="gallery-preview__grid">
+              <div class="gallery-pet-card is-featured">
+                <div><img src="assets/desktop-pet-launcher-icon.png" alt="" /></div>
+                <span>Venti</span><small>4× HD</small>
+              </div>
+              <div class="gallery-pet-card">
+                <div><img src="assets/desktop-pet-launcher-icon.png" alt="" /></div>
+                <span>Companion</span><small>2×</small>
+              </div>
+              <div class="gallery-pet-card">
+                <div><img src="assets/desktop-pet-launcher-icon.png" alt="" /></div>
+                <span>Classic</span><small>1×</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="compatibility-section" id="compatibility">
+        <div class="section-shell compatibility-layout">
+          <div class="compatibility-copy">
+            <p class="section-kicker">Codex compatible</p>
+            <h2>旧宠物包继续用，<br />高清新包也有位置。</h2>
+            <p>
+              保持对 hatch-pet / Codex 现有格式的兼容，同时支持 2×、4× 高清素材。
+              你可以直接迁移旧收藏，也可以用 Desktop Pet Skill 制作新角色。
+            </p>
+            <div class="compatibility-actions">
+              <a class="button button--ink" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
+                打开制作 Skill
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m0 0-4-4m4 4-4 4" /></svg>
+              </a>
+              <a class="text-link text-link--ink" href="https://github.com/wangling-miao/Desktop-Pet-Launcher">
+                查看源码
+              </a>
+            </div>
+          </div>
+
+          <div class="format-card">
+            <div class="format-card__header">
+              <div><span></span><span></span><span></span></div>
+              <small>pet-package / resolution</small>
+            </div>
+            <div class="format-card__body" role="table" aria-label="宠物包分辨率规格">
+              <div class="format-row format-row--head" role="row">
+                <strong role="columnheader">规格</strong>
+                <strong role="columnheader">单帧</strong>
+                <strong role="columnheader">图集</strong>
+              </div>
+              <div class="format-row" role="row">
+                <span role="cell"><i class="format-dot format-dot--gray"></i>1× 兼容</span>
+                <code role="cell">192 × 208</code>
+                <code role="cell">1536 × 1872</code>
+              </div>
+              <div class="format-row" role="row">
+                <span role="cell"><i class="format-dot format-dot--mint"></i>2× 可选</span>
+                <code role="cell">384 × 416</code>
+                <code role="cell">3072 × 3744</code>
+              </div>
+              <div class="format-row format-row--highlight" role="row">
+                <span role="cell"><i class="format-dot format-dot--coral"></i>4× 高清</span>
+                <code role="cell">768 × 832</code>
+                <code role="cell">6144 × 7488</code>
+              </div>
+            </div>
+            <div class="format-card__footer">
+              <span>pet.json</span><span>spritesheet.webp</span><span>preview.png</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="download-section" id="download">
+        <div class="download-orb download-orb--one" aria-hidden="true"></div>
+        <div class="download-orb download-orb--two" aria-hidden="true"></div>
+        <div class="section-shell">
+          <div class="download-heading">
+            <div>
+              <p class="section-kicker section-kicker--light">Download</p>
+              <h2>选好系统，<br />让桌面多一位伙伴。</h2>
+            </div>
+            <p>
+              安装后从托盘打开设置，即可导入图鉴中的桌宠或本地宠物包。
+              所有构建都可在 GitHub Releases 中核对与下载。
+            </p>
+          </div>
+
+          <div class="download-grid" aria-label="系统下载">
+            <article class="download-card-new download-card-new--featured">
+              <div class="download-card-new__top">
+                <span class="os-icon os-icon--windows" aria-hidden="true">
+                  <i></i><i></i><i></i><i></i>
+                </span>
+                <span class="recommended-badge">推荐</span>
+              </div>
+              <small>Windows 10 / 11</small>
+              <h3>Windows</h3>
+              <p>下载 setup.exe 双击安装；企业或静默部署场景可选 MSI。</p>
+              <a
+                class="download-button"
+                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                data-release-asset="windows-setup"
+              >
+                下载 setup.exe
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" /></svg>
+              </a>
+              <a
+                class="download-alt"
                 href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
                 data-release-asset="windows-msi"
-              >
-                MSI 备用
-              </a>
-            </div>
-            <small>未签名版本可能触发 SmartScreen，选择“更多信息”后继续运行。</small>
-          </article>
+              >MSI 备用</a>
+              <span class="download-note">未签名版本可能触发 SmartScreen 提示。</span>
+            </article>
 
-          <article class="download-card">
-            <span>macOS</span>
-            <h3>选择对应芯片的 DMG</h3>
-            <p>Apple Silicon 选择 aarch64，Intel Mac 选择 x64。下载后拖入 Applications。</p>
-            <a
-              class="primary-action"
-              href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-              data-release-asset="macos-arm"
-            >
-              Apple Silicon
-            </a>
-            <div class="download-alt-links">
+            <article class="download-card-new">
+              <div class="download-card-new__top">
+                <span class="os-icon os-icon--apple" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M16.7 12.2c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.3-.9-1.7 0-3.3 1-4.2 2.5-1.8 3.1-.5 7.7 1.3 10.2.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.8-.8 3.4-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9-.1 0-2.8-1.1-2.8-3.9ZM14 4.6c.7-.9 1.2-2.1 1-3.3-1 .1-2.2.7-2.9 1.6-.7.8-1.2 2-1.1 3.1 1.1.1 2.3-.5 3-1.4Z" /></svg>
+                </span>
+              </div>
+              <small>Apple Silicon / Intel</small>
+              <h3>macOS</h3>
+              <p>按芯片选择 DMG，下载后拖入 Applications 文件夹。</p>
               <a
+                class="download-button"
+                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                data-release-asset="macos-arm"
+              >
+                Apple Silicon
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" /></svg>
+              </a>
+              <a
+                class="download-alt"
                 href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
                 data-release-asset="macos-intel"
-              >
-                Intel Mac
-              </a>
-            </div>
-            <small>未公证构建可能需要在系统设置的“隐私与安全性”里允许打开。</small>
-          </article>
+              >Intel Mac</a>
+              <span class="download-note">未公证构建需在“隐私与安全性”中允许。</span>
+            </article>
 
-          <article class="download-card">
-            <span>Linux</span>
-            <h3>推荐 AppImage</h3>
-            <p>AppImage 适合直接试用；Debian/Ubuntu 可选 deb，Fedora/openSUSE 可选 rpm。</p>
+            <article class="download-card-new">
+              <div class="download-card-new__top">
+                <span class="os-icon os-icon--linux" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3c-2.8 0-4.6 2.4-4.6 5.7 0 1.4-.3 2.6-1.2 3.8-.8 1.1-1.3 2.5-1.3 3.8 0 2.6 2.8 4.7 7.1 4.7s7.1-2.1 7.1-4.7c0-1.3-.5-2.7-1.3-3.8-.9-1.2-1.2-2.4-1.2-3.8C16.6 5.4 14.8 3 12 3Z" /><path d="M9.6 8.5h.1m4.6 0h.1M9.4 12.2c1.7 1.1 3.5 1.1 5.2 0" /></svg>
+                </span>
+              </div>
+              <small>AppImage / deb / rpm</small>
+              <h3>Linux</h3>
+              <p>AppImage 适合直接试用，Debian、Fedora 系发行版也有原生包。</p>
+              <a
+                class="download-button"
+                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                data-release-asset="linux-appimage"
+              >
+                下载 AppImage
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" /></svg>
+              </a>
+              <div class="download-alt-row">
+                <a
+                  class="download-alt"
+                  href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                  data-release-asset="linux-deb"
+                >deb</a>
+                <a
+                  class="download-alt"
+                  href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
+                  data-release-asset="linux-rpm"
+                >rpm</a>
+              </div>
+              <span class="download-note">首次运行 AppImage 前需添加执行权限。</span>
+            </article>
+          </div>
+
+          <div class="download-footer">
             <a
-              class="primary-action"
               href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-              data-release-asset="linux-appimage"
-            >
-              下载 AppImage
-            </a>
-            <div class="download-alt-links">
-              <a
-                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-                data-release-asset="linux-deb"
-              >
-                deb
-              </a>
-              <a
-                href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-                data-release-asset="linux-rpm"
-              >
-                rpm
-              </a>
-            </div>
-            <small>如果 AppImage 无法运行，先执行 <code>chmod +x</code>，并确认系统 WebKit 依赖已安装。</small>
-          </article>
-        </div>
-        <div class="download-footer-actions">
-          <a
-            class="secondary-action"
-            href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest"
-            data-release-page
-          >
-            查看全部 Release 文件
-          </a>
-          <a class="secondary-action" href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">
-            桌宠制作 Skill
-          </a>
+              data-release-page
+            >查看全部 Release 文件</a>
+            <span></span>
+            <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">制作自己的桌宠包</a>
+          </div>
         </div>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="section-shell site-footer__inner">
+        <a class="site-brand site-brand--footer" href="#top">
+          <span class="site-brand__icon"><img src="assets/desktop-pet-launcher-icon.png" alt="" /></span>
+          <span class="site-brand__text"><strong>Desktop Pet</strong><small>Launcher</small></span>
+        </a>
+        <p>开源高清桌宠启动器。让喜欢的角色，安静住在桌面上。</p>
+        <div class="site-footer__links">
+          <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher">GitHub</a>
+          <a href="gallery/">桌宠图鉴</a>
+          <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/issues">反馈问题</a>
+        </div>
+      </div>
+    </footer>
+
     <script src="app.js"></script>
   </body>
 </html>
