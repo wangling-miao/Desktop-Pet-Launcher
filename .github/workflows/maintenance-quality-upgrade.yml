@@ -20,37 +20,49 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Patch, test, and publish result
+      - name: Patch, checkpoint, test, and publish
         shell: bash
         run: |
           set -Eeuo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo quality-upgrade-action.log >> .git/info/exclude
           exec > >(tee quality-upgrade-action.log) 2>&1
 
           on_error() {
             status=$?
             set +e
             git add -A
+            git add -f quality-upgrade-action.log
             git commit -m "Record quality upgrade verification failure"
-            git push --force origin HEAD:refs/heads/automation/quality-upgrade-v7-failure-20260810
+            git push --force origin HEAD:refs/heads/automation/quality-upgrade-v8-failure-20260810
             exit "$status"
           }
           trap on_error ERR
 
-          python scripts/apply_quality_upgrade.py
+          git fetch origin automation/quality-upgrade-v6-20260810
+          git show FETCH_HEAD:quality-upgrade-decoded.py > scripts/quality_upgrade_plain.py
+          python scripts/quality_upgrade_plain.py
+          rm -f scripts/quality_upgrade_plain.py
+
+          git add -A
+          git commit -m "Apply quality upgrade candidate"
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v8-candidate-20260810
+
           npm ci
           rustup component add rustfmt clippy
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
           cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "Format quality upgrade"
+            git push --force origin HEAD:refs/heads/automation/quality-upgrade-v8-candidate-20260810
+          fi
           npm run check
           cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
           cargo test --manifest-path src-tauri/Cargo.toml
 
           trap - ERR
-          rm -f quality-upgrade-action.log
-          git add -A
-          git commit -m "Improve reliability and engineering quality"
           git commit --allow-empty -m "Quality upgrade verification passed"
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v7-verified-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v8-verified-20260810
