@@ -1,0 +1,261 @@
+name: Publish V0.2.12
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-v0.2.12
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Release quality gate
+    if: >-
+      github.head_ref == 'release/publish-v0.2.12-r2' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend and website checks
+        run: npm run check
+
+      - name: Install Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Lint Rust
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: Test Rust
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  ensure-draft:
+    name: Ensure V0.2.12 draft
+    needs: quality
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Ensure draft release exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          release_id="$(gh api --paginate "repos/${{ github.repository }}/releases" --jq '.[] | select(.tag_name == "V0.2.12") | .id' | head -n 1)"
+          if [ -z "$release_id" ]; then
+            cat > /tmp/release-notes.md <<'EOF'
+          ## Desktop Pet Launcher V0.2.12
+
+          ### Highlights
+          - Added Chinese/English website i18n with browser-language detection and a manual language switcher.
+          - Improved networking with a shared asynchronous HTTP client and reduced redundant settings writes.
+          - Split Tauri capabilities by window and improved path/package handling.
+          - Added permanent frontend/Rust CI and release quality checks.
+          - Added Apache-2.0 licensing for the source code.
+          - Fixed the Windows download-card icon and removed the gallery index-maintenance note.
+          - Includes animation, click-through polling, duplicate pet ID, and maintainability improvements.
+
+          Download the installer for your operating system from the assets below.
+          EOF
+            gh release create V0.2.12 \
+              --repo "${{ github.repository }}" \
+              --target "$(git rev-parse HEAD)" \
+              --title "Desktop Pet Launcher V0.2.12" \
+              --notes-file /tmp/release-notes.md \
+              --draft
+          fi
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: quality
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Windows x64
+            slug: windows-x64
+            platform: windows-latest
+            args: ""
+            rust_targets: ""
+          - label: Linux x64
+            slug: linux-x64
+            platform: ubuntu-22.04
+            args: ""
+            rust_targets: ""
+          - label: macOS Apple Silicon
+            slug: macos-arm64
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+            rust_targets: "aarch64-apple-darwin"
+          - label: macOS Intel
+            slug: macos-x64
+            platform: macos-15-intel
+            args: "--target x86_64-apple-darwin"
+            rust_targets: "x86_64-apple-darwin"
+
+    steps:
+      - name: Checkout verified main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install macOS DMG dependencies
+        if: startsWith(matrix.platform, 'macos-')
+        run: brew install create-dmg || brew upgrade create-dmg
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri bundles
+        run: npm run tauri:build -- ${{ matrix.args }}
+
+      - name: Collect installer bundles
+        shell: python
+        run: |
+          from pathlib import Path
+          import shutil
+
+          allowed = {".exe", ".msi", ".deb", ".rpm", ".dmg"}
+          output = Path("release-assets")
+          output.mkdir(exist_ok=True)
+          copied = []
+          for path in Path("src-tauri/target").rglob("*"):
+              if not path.is_file() or "bundle" not in path.parts:
+                  continue
+              if path.suffix in allowed or path.name.endswith(".AppImage"):
+                  target = output / path.name
+                  shutil.copy2(path, target)
+                  copied.append(str(target))
+          if not copied:
+              raise SystemExit("No installer bundles found")
+          print("\n".join(copied))
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.slug }}
+          path: release-assets/*
+          if-no-files-found: error
+
+  publish:
+    name: Upload assets and publish V0.2.12
+    needs:
+      - ensure-draft
+      - build
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download all bundles
+        uses: actions/download-artifact@v4
+        with:
+          pattern: bundles-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          ls -lah release-assets
+          gh release upload V0.2.12 release-assets/* --repo "${{ github.repository }}" --clobber
+          gh release edit V0.2.12 --repo "${{ github.repository }}" --draft=false --latest
+
+  deploy-pages:
+    name: Deploy V0.2.12 website
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Write release manifest
+        shell: bash
+        run: |
+          cat > website/latest.json <<'EOF'
+          {
+            "version": "V0.2.12",
+            "name": "Desktop Pet Launcher V0.2.12",
+            "releaseUrl": "https://github.com/${{ github.repository }}/releases/tag/V0.2.12"
+          }
+          EOF
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload static site
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
