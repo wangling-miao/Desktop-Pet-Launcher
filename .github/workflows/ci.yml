@@ -57,6 +57,11 @@ jobs:
         with:
           workspaces: ./src-tauri -> target
 
+      - name: Prepare Tauri frontendDist
+        run: |
+          mkdir -p dist
+          printf '<!doctype html><html><body></body></html>\n' > dist/index.html
+
       - name: Check formatting
         run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
 
