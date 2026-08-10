@@ -22,8 +22,21 @@ jobs:
 
       - name: Create observable staging branch
         run: |
-          git switch -c automation/quality-upgrade-v3-20260810
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
+          git switch -c automation/quality-upgrade-v4-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Apply upgrade
+        run: python scripts/apply_quality_upgrade.py
+
+      - name: Publish raw candidate
+        run: |
+          git add -A
+          git diff --cached --stat
+          git diff --cached --quiet && { echo "No changes produced"; exit 1; }
+          git commit -m "Apply quality upgrade candidate"
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,24 +59,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Apply upgrade
-        run: python scripts/apply_quality_upgrade.py
-
       - name: Install frontend dependencies
         run: npm ci
 
       - name: Format Rust
-        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
-
-      - name: Publish candidate branch
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git diff --cached --stat
-          git diff --cached --quiet && { echo "No changes produced"; exit 1; }
-          git commit -m "Improve reliability and engineering quality"
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
+          cargo fmt --manifest-path src-tauri/Cargo.toml --all
+          if ! git diff --quiet; then
+            git add -A
+            git commit -m "Format quality upgrade"
+            git push origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+          fi
 
       - name: Frontend checks
         run: npm run check
@@ -77,4 +83,4 @@ jobs:
       - name: Mark verification passed
         run: |
           git commit --allow-empty -m "Quality upgrade verification passed"
-          git push origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
+          git push origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
