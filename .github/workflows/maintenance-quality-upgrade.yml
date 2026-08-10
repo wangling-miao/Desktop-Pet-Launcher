@@ -22,13 +22,25 @@ jobs:
 
       - name: Create observable staging branch
         run: |
-          git switch -c automation/quality-upgrade-v4-20260810
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+          git switch -c automation/quality-upgrade-v5-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v5-20260810
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Apply upgrade
-        run: python scripts/apply_quality_upgrade.py
+      - name: Apply upgrade with diagnostics
+        shell: bash
+        run: |
+          set +e
+          python scripts/apply_quality_upgrade.py > /tmp/quality-upgrade.log 2>&1
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            cp /tmp/quality-upgrade.log quality-upgrade-failure.log
+            git add quality-upgrade-failure.log
+            git commit -m "Record quality upgrade patch failure"
+            git push --force origin HEAD:refs/heads/automation/quality-upgrade-v5-20260810
+            exit "$status"
+          fi
 
       - name: Publish raw candidate
         run: |
@@ -36,7 +48,7 @@ jobs:
           git diff --cached --stat
           git diff --cached --quiet && { echo "No changes produced"; exit 1; }
           git commit -m "Apply quality upgrade candidate"
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v5-20260810
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -68,7 +80,7 @@ jobs:
           if ! git diff --quiet; then
             git add -A
             git commit -m "Format quality upgrade"
-            git push origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+            git push origin HEAD:refs/heads/automation/quality-upgrade-v5-20260810
           fi
 
       - name: Frontend checks
@@ -83,4 +95,4 @@ jobs:
       - name: Mark verification passed
         run: |
           git commit --allow-empty -m "Quality upgrade verification passed"
-          git push origin HEAD:refs/heads/automation/quality-upgrade-v4-20260810
+          git push origin HEAD:refs/heads/automation/quality-upgrade-v5-20260810
