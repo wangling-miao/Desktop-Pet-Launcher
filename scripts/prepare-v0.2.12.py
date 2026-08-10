@@ -66,7 +66,8 @@ replace_if_present(
 ''',
 )
 
-package = Path("package.json")ndata = json.loads(package.read_text(encoding="utf-8"))
+package = Path("package.json")
+data = json.loads(package.read_text(encoding="utf-8"))
 data["version"] = VERSION
 package.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
