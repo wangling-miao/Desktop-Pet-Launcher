@@ -920,14 +920,17 @@ fn logical_size_from_physical(value: i32, scale_factor: f64) -> f64 {
     (value.max(1) as f64 / scale_factor).round().max(1.0)
 }
 
+#[cfg(windows)]
 fn physical_from_logical(value: f64, scale_factor: f64) -> i32 {
     round_to_i32(value * scale_factor)
 }
 
+#[cfg(windows)]
 fn physical_size_from_logical(value: f64, scale_factor: f64) -> i32 {
     round_to_i32(value.max(1.0) * scale_factor).max(1)
 }
 
+#[cfg(windows)]
 fn round_to_i32(value: f64) -> i32 {
     value.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32
 }
