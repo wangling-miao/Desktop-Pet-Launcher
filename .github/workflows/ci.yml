@@ -18,7 +18,10 @@ concurrency:
 jobs:
   release-prep:
     name: Prepare V0.2.12 release branch
-    if: github.event_name == 'pull_request' && github.head_ref == 'release/v0.2.12' && github.event.pull_request.head.repo.full_name == github.repository
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'release/v0.2.12' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     permissions:
       contents: write
     runs-on: ubuntu-22.04
@@ -29,118 +32,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Apply final fixes and bump version
-        shell: bash
+      - name: Prepare release source
         run: |
-          set -Eeuo pipefail
-          python <<'PY'
-          from pathlib import Path
-          import json
-
-          VERSION = "0.2.12"
-          OLD_VERSION = "0.2.11"
-
-          gallery = Path("website/gallery/index.html")
-          text = gallery.read_text(encoding="utf-8")
-          note = '''            <p>
-              图鉴数据来自 <code>awesome-desktop-pets</code>。投稿合并后会自动生成索引，无需手动维护页面。
-            </p>
-          '''
-          if note in text:
-              text = text.replace(note, "", 1)
-          gallery.write_text(text, encoding="utf-8")
-
-          i18n = Path("website/i18n.js")
-          text = i18n.read_text(encoding="utf-8")
-          translation = '''  add(
-            "图鉴数据来自 awesome-desktop-pets。投稿合并后会自动生成索引，无需手动维护页面。",
-            "图鉴数据来自 awesome-desktop-pets。投稿合并后会自动生成索引，无需手动维护页面。",
-            "Gallery data comes from awesome-desktop-pets. Once a contribution is merged, the index is generated automatically without manual page maintenance.",
-          );
-          '''
-          if translation in text:
-              text = text.replace(translation, "", 1)
-          i18n.write_text(text, encoding="utf-8")
-
-          home = Path("website/index.html")
-          text = home.read_text(encoding="utf-8")
-          old_icon = '''                <span class="os-icon os-icon--windows" aria-hidden="true">
-                  <i></i><i></i><i></i><i></i>
-                </span>'''
-          new_icon = '''                <span class="os-icon os-icon--windows" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M3 4h8v7H3V4Zm10 0h8v7h-8V4ZM3 13h8v7H3v-7Zm10 0h8v7h-8v-7Z" />
-                  </svg>
-                </span>'''
-          if old_icon in text:
-              text = text.replace(old_icon, new_icon, 1)
-          elif new_icon not in text:
-              raise SystemExit("Windows icon markup not found")
-          home.write_text(text, encoding="utf-8")
-
-          css = Path("website/landing-download.css")
-          text = css.read_text(encoding="utf-8")
-          old_css = '''.os-icon--windows {
-            grid-template-columns: repeat(2, 10px);
-            grid-template-rows: repeat(2, 10px);
-            gap: 2px;
-          }
-
-          .os-icon--windows i {
-            width: 10px;
-            height: 10px;
-            background: currentColor;
-          }
-          '''
-          new_css = '''.os-icon--windows svg {
-            fill: currentColor;
-          }
-          '''
-          if old_css in text:
-              text = text.replace(old_css, new_css, 1)
-          elif new_css not in text:
-              raise SystemExit("Windows icon CSS not found")
-          css.write_text(text, encoding="utf-8")
-
-          package = Path("package.json")
-          data = json.loads(package.read_text(encoding="utf-8"))
-          data["version"] = VERSION
-          package.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-          package_lock = Path("package-lock.json")
-          if package_lock.exists():
-              data = json.loads(package_lock.read_text(encoding="utf-8"))
-              data["version"] = VERSION
-              if isinstance(data.get("packages"), dict) and isinstance(data["packages"].get(""), dict):
-                  data["packages"][""]["version"] = VERSION
-              package_lock.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-          cargo = Path("src-tauri/Cargo.toml")
-          text = cargo.read_text(encoding="utf-8")
-          old = f'version = "{OLD_VERSION}"'
-          if old in text:
-              text = text.replace(old, f'version = "{VERSION}"', 1)
-          elif f'version = "{VERSION}"' not in text:
-              raise SystemExit("Cargo.toml version not found")
-          cargo.write_text(text, encoding="utf-8")
-
-          cargo_lock = Path("src-tauri/Cargo.lock")
-          text = cargo_lock.read_text(encoding="utf-8")
-          old = f'name = "desktop-pet-launcher"\nversion = "{OLD_VERSION}"'
-          new = f'name = "desktop-pet-launcher"\nversion = "{VERSION}"'
-          if old in text:
-              text = text.replace(old, new, 1)
-          elif new not in text:
-              raise SystemExit("Cargo.lock root package version not found")
-          cargo_lock.write_text(text, encoding="utf-8")
-
-          tauri = Path("src-tauri/tauri.conf.json")
-          data = json.loads(tauri.read_text(encoding="utf-8"))
-          data["version"] = VERSION
-          tauri.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
-          Path(".release-v0.2.12-request").unlink(missing_ok=True)
-          PY
+          python scripts/prepare-v0.2.12.py
           git diff --check
 
       - name: Commit prepared release branch
@@ -243,7 +137,9 @@ jobs:
 
   create-release:
     name: Create V0.2.12 draft release
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release: V0.2.12')
+    if: >-
+      github.event_name == 'push' &&
+      contains(github.event.head_commit.message, 'release: V0.2.12')
     needs:
       - frontend
       - rust
