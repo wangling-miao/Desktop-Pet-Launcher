@@ -4,13 +4,15 @@ use std::env;
 use std::fs;
 use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::menu::{Menu, MenuItem};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{
     AppHandle, Emitter, Manager, Runtime, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
+
+mod network;
+use network::NetworkState;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -176,18 +178,21 @@ fn list_pet_packages(
     let mut packages = Vec::new();
     for root in roots {
         let normalized = root.canonicalize().unwrap_or(root);
-        let key = normalized.to_string_lossy().to_lowercase();
+        let key = path_identity_key(&normalized);
         if seen_roots.insert(key) {
             collect_pet_packages(&normalized, &mut packages);
         }
     }
 
+    // Package IDs are the persisted identity in the UI. Keep the first package discovered
+    // according to root priority so duplicate IDs never produce an ambiguous selection.
+    let mut seen_ids = HashSet::new();
+    packages.retain(|package| seen_ids.insert(package.id.clone()));
     packages.sort_by(|left, right| {
         left.display_name
             .to_lowercase()
             .cmp(&right.display_name.to_lowercase())
     });
-    packages.dedup_by(|left, right| left.id == right.id && left.root_dir == right.root_dir);
     Ok(packages)
 }
 
@@ -257,10 +262,7 @@ fn get_pet_window_frame<R: Runtime>(app: AppHandle<R>) -> Result<WindowFrame, St
 }
 
 #[tauri::command]
-fn set_pet_window_frame<R: Runtime>(
-    app: AppHandle<R>,
-    frame: WindowFrame,
-) -> Result<(), String> {
+fn set_pet_window_frame<R: Runtime>(app: AppHandle<R>, frame: WindowFrame) -> Result<(), String> {
     write_window_frame(&pet_window(&app)?, frame)
 }
 
@@ -295,7 +297,10 @@ fn read_settings_backup(app: AppHandle) -> Result<Option<SettingsBackup>, String
 
 #[tauri::command]
 fn write_settings_backup(app: AppHandle, settings: serde_json::Value) -> Result<(), String> {
-    let app_data_dir = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
     fs::create_dir_all(&app_data_dir).map_err(|error| error.to_string())?;
     let path = app_data_dir.join("settings.backup.json");
     let content = serde_json::to_string_pretty(&settings).map_err(|error| error.to_string())?;
@@ -310,17 +315,26 @@ fn reveal_pet_folder(path_or_id: String, app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String> {
+async fn import_pet_from_url(
+    url: String,
+    app: AppHandle,
+    network: tauri::State<'_, NetworkState>,
+) -> Result<PetPackage, String> {
     let parsed = reqwest::Url::parse(url.trim()).map_err(|error| error.to_string())?;
     if !matches!(parsed.scheme(), "https" | "http") {
         return Err("Only http and https pet package URLs are supported".to_string());
     }
 
-    let response = reqwest::blocking::get(parsed).map_err(|error| error.to_string())?;
+    let response = network
+        .client
+        .get(parsed)
+        .send()
+        .await
+        .map_err(|error| error.to_string())?;
     if !response.status().is_success() {
         return Err(format!("Download failed with status {}", response.status()));
     }
-    let bytes = response.bytes().map_err(|error| error.to_string())?;
+    let bytes = response.bytes().await.map_err(|error| error.to_string())?;
 
     let app_data = app
         .path()
@@ -371,7 +385,10 @@ fn import_pet_from_url(url: String, app: AppHandle) -> Result<PetPackage, String
 }
 
 #[tauri::command]
-fn send_llm_chat(request: LlmChatRequest) -> Result<LlmChatResponse, String> {
+async fn send_llm_chat(
+    network: tauri::State<'_, NetworkState>,
+    request: LlmChatRequest,
+) -> Result<LlmChatResponse, String> {
     let endpoint = request.endpoint.trim();
     if endpoint.is_empty() {
         return Err("请先填写接口地址".to_string());
@@ -414,12 +431,8 @@ fn send_llm_chat(request: LlmChatRequest) -> Result<LlmChatResponse, String> {
         temperature: request.temperature.clamp(0.0, 2.0),
     };
 
-    let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(90))
-        .build()
-        .map_err(|error| error.to_string())?;
-
-    let mut builder = client
+    let mut builder = network
+        .client
         .post(url)
         .header(reqwest::header::CONTENT_TYPE, "application/json")
         .json(&payload);
@@ -428,9 +441,9 @@ fn send_llm_chat(request: LlmChatRequest) -> Result<LlmChatResponse, String> {
         builder = builder.bearer_auth(api_key);
     }
 
-    let response = builder.send().map_err(|error| error.to_string())?;
+    let response = builder.send().await.map_err(|error| error.to_string())?;
     let status = response.status();
-    let body = response.text().map_err(|error| error.to_string())?;
+    let body = response.text().await.map_err(|error| error.to_string())?;
     if !status.is_success() {
         return Err(format!("模型接口返回 {status}: {}", shorten_error(&body)));
     }
@@ -461,6 +474,7 @@ pub fn run() {
     }
 
     builder
+        .manage(NetworkState::new().expect("failed to create HTTP client"))
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -595,7 +609,7 @@ fn settings_backup_candidates(app: &AppHandle) -> Vec<PathBuf> {
     for directory in directories {
         for file_name in file_names {
             let path = directory.join(file_name);
-            let key = path.to_string_lossy().to_lowercase();
+            let key = path_identity_key(&path);
             if seen.insert(key) {
                 paths.push(path);
             }
@@ -621,7 +635,11 @@ fn platform_settings_bases() -> Vec<PathBuf> {
     #[cfg(target_os = "macos")]
     {
         if let Some(home) = env::var_os("HOME") {
-            bases.push(PathBuf::from(home).join("Library").join("Application Support"));
+            bases.push(
+                PathBuf::from(home)
+                    .join("Library")
+                    .join("Application Support"),
+            );
         }
     }
 
@@ -864,7 +882,9 @@ fn read_cursor_position<R: Runtime>(
 fn read_cursor_position<R: Runtime>(
     window: &WebviewWindow<R>,
 ) -> Result<Option<WindowPoint>, String> {
-    let position = window.cursor_position().map_err(|error| error.to_string())?;
+    let position = window
+        .cursor_position()
+        .map_err(|error| error.to_string())?;
     let scale_factor = window_scale_factor(window)?;
     Ok(Some(WindowPoint {
         x: (position.x / scale_factor).round(),
@@ -909,9 +929,19 @@ fn physical_size_from_logical(value: f64, scale_factor: f64) -> i32 {
 }
 
 fn round_to_i32(value: f64) -> i32 {
-    value
-        .round()
-        .clamp(i32::MIN as f64, i32::MAX as f64) as i32
+    value.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32
+}
+
+fn path_identity_key(path: &Path) -> String {
+    #[cfg(windows)]
+    {
+        return path.to_string_lossy().to_lowercase();
+    }
+
+    #[cfg(not(windows))]
+    {
+        path.to_string_lossy().into_owned()
+    }
 }
 
 fn collect_pet_packages(root: &Path, packages: &mut Vec<PetPackage>) {
@@ -1151,4 +1181,31 @@ fn shorten_error(body: &str) -> String {
         return compact;
     }
     compact.chars().take(MAX_LEN).collect::<String>() + "..."
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn safe_pet_ids_accept_expected_values() {
+        assert!(is_safe_pet_id("venti-bard"));
+        assert!(is_safe_pet_id("pet-123"));
+        assert!(!is_safe_pet_id("../pet"));
+        assert!(!is_safe_pet_id("Pet-123"));
+        assert!(!is_safe_pet_id("ab"));
+    }
+
+    #[test]
+    fn chat_completion_urls_are_normalized() {
+        assert_eq!(
+            normalize_chat_completion_url("https://example.com/v1").unwrap(),
+            "https://example.com/v1/chat/completions"
+        );
+        assert_eq!(
+            normalize_chat_completion_url("https://example.com/v1/chat/completions").unwrap(),
+            "https://example.com/v1/chat/completions"
+        );
+        assert!(normalize_chat_completion_url("file:///tmp/model").is_err());
+    }
 }

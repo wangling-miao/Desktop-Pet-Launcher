@@ -66,13 +66,17 @@ export const DEFAULT_SETTINGS: AppSettings = {
 };
 
 let settingsStore: Store | null = null;
+let pendingDiskSettings: AppSettings | null = null;
+let persistTimer: number | null = null;
+let persistInFlight = false;
+const SETTINGS_PERSIST_DELAY_MS = 250;
 
 export async function getSettingsStore(): Promise<Store | null> {
   if (settingsStore) {
     return settingsStore;
   }
   try {
-    settingsStore = await load("settings.json", { autoSave: true, defaults: {} });
+    settingsStore = await load("settings.json", { autoSave: false, defaults: {} });
     return settingsStore;
   } catch {
     return null;
@@ -86,7 +90,8 @@ export async function loadSettings(): Promise<AppSettings> {
     return normalizeSettings(mergeSettingsSources(readBrowserSettings(), backup));
   }
   const saved = await store.get<Partial<AppSettings>>("appSettings");
-  const merged = mergeSettingsSources(saved, backup);
+  const browser = readBrowserSettings();
+  const merged = mergeSettingsSources(browser, mergeSettingsSources(saved, backup));
   const normalized = normalizeSettings(merged);
   if (shouldRepairStoredSettings(saved, backup)) {
     await saveSettings(normalized);
@@ -96,14 +101,56 @@ export async function loadSettings(): Promise<AppSettings> {
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
   localStorage.setItem("desktop-pet-settings", JSON.stringify(settings));
-  await safeWriteSettingsBackup(settings);
 
   const store = await getSettingsStore();
-  if (!store) {
+  if (store) {
+    await store.set("appSettings", settings);
+  }
+  queueDiskPersistence(settings, store);
+}
+
+function queueDiskPersistence(settings: AppSettings, store: Store | null): void {
+  pendingDiskSettings = settings;
+  if (persistTimer !== null) {
+    window.clearTimeout(persistTimer);
+  }
+  persistTimer = window.setTimeout(() => {
+    persistTimer = null;
+    void flushDiskPersistence(store);
+  }, SETTINGS_PERSIST_DELAY_MS);
+}
+
+async function flushDiskPersistence(store: Store | null): Promise<void> {
+  if (persistInFlight) {
+    if (persistTimer === null) {
+      persistTimer = window.setTimeout(() => {
+        persistTimer = null;
+        void flushDiskPersistence(store);
+      }, SETTINGS_PERSIST_DELAY_MS);
+    }
     return;
   }
-  await store.set("appSettings", settings);
-  await store.save();
+
+  const settings = pendingDiskSettings;
+  if (!settings) {
+    return;
+  }
+
+  pendingDiskSettings = null;
+  persistInFlight = true;
+  try {
+    await safeWriteSettingsBackup(settings);
+    if (store) {
+      await store.save();
+    }
+  } catch (error) {
+    console.error("Failed to persist desktop pet settings", error);
+  } finally {
+    persistInFlight = false;
+    if (pendingDiskSettings) {
+      queueDiskPersistence(pendingDiskSettings, store);
+    }
+  }
 }
 
 export function normalizeSettings(saved?: Partial<AppSettings> | null): AppSettings {
