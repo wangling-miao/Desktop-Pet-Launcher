@@ -20,8 +20,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Create staging branch
-        run: git switch -c automation/quality-upgrade-v2-20260810
+      - name: Create observable staging branch
+        run: |
+          git switch -c automation/quality-upgrade-v3-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -61,7 +63,7 @@ jobs:
           git diff --cached --stat
           git diff --cached --quiet && { echo "No changes produced"; exit 1; }
           git commit -m "Improve reliability and engineering quality"
-          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v2-20260810
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
 
       - name: Frontend checks
         run: npm run check
@@ -75,4 +77,4 @@ jobs:
       - name: Mark verification passed
         run: |
           git commit --allow-empty -m "Quality upgrade verification passed"
-          git push origin HEAD:refs/heads/automation/quality-upgrade-v2-20260810
+          git push origin HEAD:refs/heads/automation/quality-upgrade-v3-20260810
