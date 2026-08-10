@@ -1,3 +1,8 @@
+const i18nReady = import("./i18n.js").catch((error) => {
+  console.error("Failed to initialize website i18n", error);
+  return null;
+});
+
 const galleryGrid = document.querySelector("[data-gallery-grid]");
 const galleryStatus = document.querySelector("[data-gallery-status]");
 const gallerySearch = document.querySelector("[data-gallery-search]");
@@ -15,8 +20,55 @@ const galleryIndexUrl = "https://wangling-miao.github.io/awesome-desktop-pets/in
 const fallbackGalleryIndexUrl = "../gallery-data/index.json";
 const galleryFallbackImage = "../assets/desktop-pet-launcher-icon.png";
 
+const fallbackMessages = {
+  "gallery.updated": "{date}更新",
+  "gallery.synced": "已同步",
+  "gallery.statusFallback": "远端索引暂不可用 · 正在显示本地快照{date}",
+  "gallery.statusSynced": "社区索引已同步{date}",
+  "gallery.errorTitle": "图鉴暂时没有加载成功",
+  "gallery.errorCopy": "可以稍后刷新页面，或直接前往 GitHub 图鉴仓库浏览。",
+  "gallery.errorStatus": "图鉴索引读取失败 · 可前往 GitHub 仓库查看",
+  "gallery.syncFailed": "同步失败",
+  "gallery.featured": "社区精选",
+  "gallery.waiting": "等待新成员",
+  "gallery.syncing": "图鉴正在同步",
+  "gallery.syncingHint": "也可以直接打开 GitHub 图鉴仓库查看桌宠包。",
+  "gallery.nextPet": "下一只会是谁？",
+  "gallery.submitHint": "欢迎把你的桌宠投稿到社区图鉴。",
+  "gallery.available": "可用桌宠 {count} 只",
+  "gallery.previewAlt": "{name} 预览",
+  "gallery.noDescription": "这个桌宠还没有填写介绍。",
+  "gallery.unknownSize": "大小未知",
+  "gallery.unmarkedLicense": "未标注授权",
+  "gallery.download": "下载宠物包",
+  "gallery.copy": "复制链接",
+  "gallery.copyAria": "复制 {name} 的启动器导入链接",
+  "gallery.copyTitle": "复制启动器导入链接",
+  "gallery.noDownload": "暂时没有可用下载",
+  "gallery.copied": "已复制",
+  "gallery.copyFailed": "复制失败",
+  "gallery.unnamed": "未命名桌宠",
+};
+
+function tr(key, variables = {}) {
+  const translated = window.DPLI18N?.t?.(key, variables);
+  if (translated && translated !== key) {
+    return translated;
+  }
+  const template = fallbackMessages[key] || key;
+  return template.replace(/\{(\w+)\}/g, (_, name) => String(variables[name] ?? ""));
+}
+
+function currentLanguage() {
+  return window.DPLI18N?.getLanguage?.() || "zh";
+}
+
+function currentLocale() {
+  return window.DPLI18N?.locale?.() || "zh-CN";
+}
+
 if (galleryGrid) {
-  loadGallery();
+  i18nReady.finally(() => loadGallery());
 }
 
 async function loadGallery() {
@@ -107,6 +159,10 @@ async function loadGallery() {
     });
 
     galleryGrid.addEventListener("click", handleGalleryCopyClick);
+    document.addEventListener("dpl:languagechange", () => {
+      updateGalleryOverview(index, pets, usedFallback, assetBaseUrl);
+      render();
+    });
     render();
   } catch (error) {
     galleryGrid.setAttribute("aria-busy", "false");
@@ -116,18 +172,18 @@ async function loadGallery() {
       const heading = galleryEmpty.querySelector("h3");
       const copy = galleryEmpty.querySelector("p");
       if (heading) {
-        heading.textContent = "图鉴暂时没有加载成功";
+        heading.textContent = tr("gallery.errorTitle");
       }
       if (copy) {
-        copy.textContent = "可以稍后刷新页面，或直接前往 GitHub 图鉴仓库浏览。";
+        copy.textContent = tr("gallery.errorCopy");
       }
     }
     if (galleryStatus) {
-      galleryStatus.textContent = "图鉴索引读取失败 · 可前往 GitHub 仓库查看";
+      galleryStatus.textContent = tr("gallery.errorStatus");
     }
     galleryIndexState?.classList.add("is-error");
     if (galleryUpdated) {
-      galleryUpdated.textContent = "同步失败";
+      galleryUpdated.textContent = tr("gallery.syncFailed");
     }
     if (galleryFeatured) {
       galleryFeatured.setAttribute("aria-busy", "false");
@@ -163,12 +219,19 @@ function updateGalleryOverview(index, pets, usedFallback, assetBaseUrl) {
     galleryTotal.textContent = String(pets.length);
   }
   if (galleryUpdated) {
-    galleryUpdated.textContent = generatedAt ? `${generatedAt}更新` : "已同步";
+    galleryUpdated.textContent = generatedAt ? tr("gallery.updated", { date: generatedAt }) : tr("gallery.synced");
   }
   if (galleryStatus) {
+    const date = generatedAt
+      ? usedFallback
+        ? currentLanguage() === "zh"
+          ? `（${generatedAt}）`
+          : ` (${generatedAt})`
+        : ` · ${generatedAt}`
+      : "";
     galleryStatus.textContent = usedFallback
-      ? `远端索引暂不可用 · 正在显示本地快照${generatedAt ? `（${generatedAt}）` : ""}`
-      : `社区索引已同步${generatedAt ? ` · ${generatedAt}` : ""}`;
+      ? tr("gallery.statusFallback", { date })
+      : tr("gallery.statusSynced", { date });
   }
   galleryIndexState?.classList.toggle("is-fallback", usedFallback);
   if (galleryFeatured) {
@@ -226,7 +289,7 @@ function matchesGallerySearch(entry, query) {
 
 function comparePets(left, right, sort) {
   if (sort === "name") {
-    return getPetDisplayName(left).localeCompare(getPetDisplayName(right), "zh-CN", {
+    return getPetDisplayName(left).localeCompare(getPetDisplayName(right), currentLocale(), {
       numeric: true,
       sensitivity: "base",
     });
@@ -238,7 +301,7 @@ function comparePets(left, right, sort) {
   if (dateDifference !== 0) {
     return dateDifference;
   }
-  return getPetDisplayName(left).localeCompare(getPetDisplayName(right), "zh-CN", {
+  return getPetDisplayName(left).localeCompare(getPetDisplayName(right), currentLocale(), {
     numeric: true,
     sensitivity: "base",
   });
@@ -249,13 +312,13 @@ function renderFeaturedGallery(pets, baseUrl) {
   if (featured.length === 0) {
     return `
       <div class="gallery-showcase__heading">
-        <span>社区精选</span>
-        <strong>等待新成员</strong>
+        <span>${escapeHtml(tr("gallery.featured"))}</span>
+        <strong>${escapeHtml(tr("gallery.waiting"))}</strong>
       </div>
       <div class="gallery-showcase__cards">
         <div class="gallery-featured-more" style="grid-column: 1 / -1; grid-row: 1 / 3">
-          <strong>图鉴正在同步</strong>
-          <span>也可以直接打开 GitHub 图鉴仓库查看桌宠包。</span>
+          <strong>${escapeHtml(tr("gallery.syncing"))}</strong>
+          <span>${escapeHtml(tr("gallery.syncingHint"))}</span>
         </div>
       </div>
     `;
@@ -265,16 +328,16 @@ function renderFeaturedGallery(pets, baseUrl) {
   while (cards.length < 3) {
     cards.push(`
       <a class="gallery-featured-more" href="https://github.com/wangling-miao/awesome-desktop-pets/blob/main/CONTRIBUTING.md">
-        <strong>下一只会是谁？</strong>
-        <span>欢迎把你的桌宠投稿到社区图鉴。</span>
+        <strong>${escapeHtml(tr("gallery.nextPet"))}</strong>
+        <span>${escapeHtml(tr("gallery.submitHint"))}</span>
       </a>
     `);
   }
 
   return `
     <div class="gallery-showcase__heading">
-      <span>社区精选</span>
-      <strong>${pets.length} pets available</strong>
+      <span>${escapeHtml(tr("gallery.featured"))}</span>
+      <strong>${escapeHtml(tr("gallery.available", { count: pets.length }))}</strong>
     </div>
     <div class="gallery-showcase__cards">
       ${cards.join("")}
@@ -290,7 +353,7 @@ function renderFeaturedPet(entry, baseUrl, primary) {
     <article class="gallery-featured-pet${primary ? " gallery-featured-pet--primary" : ""}">
       <span class="gallery-featured-pet__badge">${escapeHtml(resolution)}</span>
       <div class="gallery-featured-pet__media">
-        <img src="${escapeHtml(preview || galleryFallbackImage)}" alt="${escapeHtml(name)} 预览" decoding="async" />
+        <img src="${escapeHtml(preview || galleryFallbackImage)}" alt="${escapeHtml(tr("gallery.previewAlt", { name }))}" decoding="async" />
       </div>
       <div class="gallery-featured-pet__copy">
         <strong>${escapeHtml(name)}</strong>
@@ -309,27 +372,28 @@ function renderPetCard(entry, baseUrl) {
   if (tags.length > 4) {
     visibleTags.push(`<span>+${tags.length - 4}</span>`);
   }
-  const description = entry.description || "这个桌宠还没有填写介绍。";
+  const description = entry.description || tr("gallery.noDescription");
   const author = entry.author || "unknown";
   const resolution = normalizeResolution(entry.resolution);
   const version = entry.version || "1.0.0";
-  const size = Number(entry.downloadSize) > 0 ? formatBytes(Number(entry.downloadSize)) : "大小未知";
+  const size = Number(entry.downloadSize) > 0 ? formatBytes(Number(entry.downloadSize)) : tr("gallery.unknownSize");
   const format = String(entry.format || "desktop-pet").replaceAll("-", " ");
-  const license = entry.license || "未标注授权";
+  const license = entry.license || tr("gallery.unmarkedLicense");
   const shortLicense = license.length > 42 ? `${license.slice(0, 40)}…` : license;
+  const authorLabel = currentLanguage() === "zh" ? `作者：${author}` : `by ${author}`;
 
   const actions = download
     ? `
       <a href="${escapeHtml(download)}">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v10m0 0 4-4m-4 4L6 9M4 16h12" /></svg>
-        下载宠物包
+        ${escapeHtml(tr("gallery.download"))}
       </a>
-      <button type="button" data-copy-url="${escapeHtml(download)}" aria-label="复制 ${escapeHtml(name)} 的启动器导入链接" title="复制启动器导入链接">
+      <button type="button" data-copy-url="${escapeHtml(download)}" aria-label="${escapeHtml(tr("gallery.copyAria", { name }))}" title="${escapeHtml(tr("gallery.copyTitle"))}">
         <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="7" width="9" height="9" rx="2" /><path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" /></svg>
-        <span data-copy-label>复制链接</span>
+        <span data-copy-label>${escapeHtml(tr("gallery.copy"))}</span>
       </button>
     `
-    : `<span class="is-disabled">暂时没有可用下载</span>`;
+    : `<span class="is-disabled">${escapeHtml(tr("gallery.noDownload"))}</span>`;
 
   return `
     <article class="pet-card">
@@ -340,7 +404,7 @@ function renderPetCard(entry, baseUrl) {
         </div>
         <img
           src="${escapeHtml(preview || galleryFallbackImage)}"
-          alt="${escapeHtml(name)} 预览"
+          alt="${escapeHtml(tr("gallery.previewAlt", { name }))}"
           loading="lazy"
           decoding="async"
         />
@@ -348,7 +412,7 @@ function renderPetCard(entry, baseUrl) {
       <div class="pet-card__body">
         <div class="pet-card__identity">
           <div>
-            <p class="pet-card__author">by ${escapeHtml(author)}</p>
+            <p class="pet-card__author">${escapeHtml(authorLabel)}</p>
             <h3>${escapeHtml(name)}</h3>
           </div>
           <span class="pet-card__size">${escapeHtml(size)}</span>
@@ -380,14 +444,14 @@ function handleGalleryCopyClick(event) {
   }
 
   const label = button.querySelector("[data-copy-label]");
-  const originalLabel = label?.textContent || "复制链接";
+  const originalLabel = tr("gallery.copy");
   button.disabled = true;
 
   copyText(url)
     .then(() => {
       button.classList.add("is-copied");
       if (label) {
-        label.textContent = "已复制";
+        label.textContent = tr("gallery.copied");
       }
       window.setTimeout(() => {
         button.classList.remove("is-copied");
@@ -399,7 +463,7 @@ function handleGalleryCopyClick(event) {
     })
     .catch(() => {
       if (label) {
-        label.textContent = "复制失败";
+        label.textContent = tr("gallery.copyFailed");
       }
       window.setTimeout(() => {
         button.disabled = false;
@@ -430,7 +494,7 @@ function normalizeSearchText(value) {
   return String(value)
     .normalize("NFKC")
     .trim()
-    .toLocaleLowerCase("zh-CN");
+    .toLocaleLowerCase(currentLocale());
 }
 
 function normalizeResolution(value) {
@@ -442,7 +506,7 @@ function normalizeResolution(value) {
 }
 
 function getPetDisplayName(entry) {
-  return String(entry.displayName || entry.name || entry.id || "未命名桌宠");
+  return String(entry.displayName || entry.name || entry.id || tr("gallery.unnamed"));
 }
 
 function galleryDateValue(value) {
@@ -455,7 +519,7 @@ function formatGalleryDate(value) {
   if (!timestamp) {
     return "";
   }
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(currentLocale(), {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -503,7 +567,7 @@ function escapeHtml(value) {
 
 function formatBytes(value) {
   if (!Number.isFinite(value) || value < 0) {
-    return "大小未知";
+    return tr("gallery.unknownSize");
   }
   if (value < 1024) {
     return `${value} B`;
