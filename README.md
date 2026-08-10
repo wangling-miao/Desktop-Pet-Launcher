@@ -25,7 +25,8 @@ https://pet.nether.top
 * Launch at startup: uses the Tauri Autostart plugin.
 * Single instance: prevents duplicate application instances.
 * Windows GUI subsystem: launching the release exe directly does not open a cmd window.
-* Release CI: pushing a `V*` tag automatically builds Windows, Linux, and macOS installers and publishes a GitHub Release.
+* Continuous integration: every push and pull request to `main` runs frontend checks, Rust formatting, Clippy, and tests.
+* Release CI: pushing a `V*` tag runs the quality gate first, then builds Windows, Linux, and macOS installers and publishes a GitHub Release.
 * Official gallery page: `https://pet.nether.top/gallery/`
 
 ## Quick Start
@@ -34,6 +35,12 @@ Install dependencies:
 
 ```powershell
 npm install
+```
+
+Run all frontend checks:
+
+```powershell
+npm run check
 ```
 
 Build the frontend:
@@ -66,16 +73,26 @@ npm run tauri:build
 │  │  └─ SettingsWindow.tsx     # Settings UI
 │  ├─ lib/
 │  │  ├─ petContract.ts         # Atlas rows/columns, states, and high-resolution selection logic
-│  │  ├─ settings.ts            # Persistent settings via Store
+│  │  ├─ petPalette.ts          # Pet palette extraction and color helpers
+│  │  ├─ settings.ts            # Persistent settings and coalesced disk writes
 │  │  ├─ tauriApi.ts            # Tauri command and plugin wrappers
 │  │  └─ usePetAnimation.ts     # Animation frame scheduling
 │  └─ styles.css
 ├─ src-tauri/
-│  ├─ capabilities/default.json # Tauri 2 capability permissions
+│  ├─ capabilities/
+│  │  ├─ pet.json               # Minimal capabilities for the pet window
+│  │  └─ settings.json          # Settings-window capabilities
 │  ├─ icons/                    # App, tray, and installer icons
-│  ├─ src/lib.rs                # Rust commands, scanning, tray, and window handling
+│  ├─ src/
+│  │  ├─ lib.rs                 # Commands, scanning, tray, and window handling
+│  │  └─ network.rs             # Shared asynchronous HTTP client
 │  └─ tauri.conf.json
-└─ .github/workflows/release.yml
+├─ scripts/check-versions.mjs    # package/Cargo/Tauri version consistency check
+├─ tests/                        # Node-based project consistency tests
+└─ .github/workflows/
+   ├─ ci.yml                     # Push/PR quality checks
+   ├─ pages.yml                  # Website deployment
+   └─ release.yml                # Quality-gated release builds
 ```
 
 ## Pet Package Directories
@@ -268,6 +285,8 @@ git tag Vx.y.z
 git push origin main --tags
 ```
 
+Before any platform installer is built, the Release workflow runs the same frontend checks plus Rust formatting, Clippy with warnings denied, and Rust tests. Only a successful quality gate starts the release matrix.
+
 The Release job builds:
 
 * Windows x64
@@ -305,4 +324,3 @@ The NSIS installer and uninstaller are configured to use `src-tauri/icons/icon.i
 The Desktop Pet Launcher source code is licensed under the **Apache License 2.0**.
 
 Desktop pet artwork, character names, gallery packages, and other third-party assets may use separate licenses or require separate rights review. The Apache-2.0 license for this repository's source code does not automatically grant rights to those assets. Check each pet package's license metadata before redistributing it.
-
