@@ -1,3 +1,4 @@
+# Explicit second push: the workflow already exists on the default branch.
 name: Release V0.2.12
 
 on:
@@ -191,8 +192,6 @@ jobs:
     name: Create draft release
     needs: quality
     runs-on: ubuntu-22.04
-    outputs:
-      tag: V0.2.12
     steps:
       - name: Checkout prepared main
         uses: actions/checkout@v4
