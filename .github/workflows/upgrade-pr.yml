@@ -45,16 +45,19 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          git fetch origin automation/quality-upgrade-v6-20260810
-          git show FETCH_HEAD:quality-upgrade-decoded.py > scripts/quality_upgrade_plain.py
-          python scripts/quality_upgrade_plain.py
-          rm -f scripts/quality_upgrade_plain.py .quality-upgrade-request .github/workflows/upgrade-pr.yml
-          cargo fmt --manifest-path src-tauri/Cargo.toml --all
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Improve reliability and engineering quality"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          if [ -f .quality-upgrade-request ]; then
+            mkdir -p scripts
+            git fetch origin automation/quality-upgrade-v6-20260810
+            git show FETCH_HEAD:quality-upgrade-decoded.py > scripts/quality_upgrade_plain.py
+            python scripts/quality_upgrade_plain.py
+            rm -f scripts/quality_upgrade_plain.py .quality-upgrade-request .github/workflows/upgrade-pr.yml
+            cargo fmt --manifest-path src-tauri/Cargo.toml --all
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Improve reliability and engineering quality"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
 
       - name: Frontend checks
         run: npm run check
