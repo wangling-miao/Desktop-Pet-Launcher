@@ -1,0 +1,73 @@
+name: Maintenance Quality Upgrade
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/maintenance-quality-upgrade.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    name: Apply and verify quality upgrade
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create staging branch
+        run: git switch -c automation/quality-upgrade-20260810
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Apply upgrade
+        run: python scripts/apply_quality_upgrade.py
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Format Rust
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all
+
+      - name: Frontend checks
+        run: npm run check
+
+      - name: Rust lint
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      - name: Commit verified changes to staging branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --stat
+          git diff --cached --quiet && { echo "No changes produced"; exit 1; }
+          git commit -m "Improve reliability and engineering quality"
+          git push --force origin HEAD:refs/heads/automation/quality-upgrade-20260810
