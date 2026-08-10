@@ -1,12 +1,12 @@
-# Explicit second push: the workflow already exists on the default branch.
 name: Release V0.2.12
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
-    paths:
-      - ".github/workflows/release-v0.2.12.yml"
 
 permissions:
   contents: write
@@ -14,21 +14,22 @@ permissions:
   id-token: write
 
 concurrency:
-  group: release-v0.2.12
+  group: release-v0.2.12-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
-  prepare:
-    name: Prepare V0.2.12
+  prepare-pr:
+    name: Prepare and verify V0.2.12
+    if: github.event_name == 'pull_request' && github.head_ref == 'release/v0.2.12'
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout main
+      - name: Checkout release branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Apply final website fixes and bump version
+      - name: Apply final fixes and bump version
         shell: bash
         run: |
           set -Eeuo pipefail
@@ -71,9 +72,11 @@ jobs:
                     <path d="M3 4h8v7H3V4Zm10 0h8v7h-8V4ZM3 13h8v7H3v-7Zm10 0h8v7h-8v-7Z" />
                   </svg>
                 </span>'''
-          if old_icon not in text:
+          if old_icon in text:
+              text = text.replace(old_icon, new_icon, 1)
+          elif new_icon not in text:
               raise SystemExit("Windows icon markup not found")
-          home.write_text(text.replace(old_icon, new_icon, 1), encoding="utf-8")
+          home.write_text(text, encoding="utf-8")
 
           css = Path("website/landing-download.css")
           text = css.read_text(encoding="utf-8")
@@ -93,9 +96,11 @@ jobs:
             fill: currentColor;
           }
           '''
-          if old_css not in text:
+          if old_css in text:
+              text = text.replace(old_css, new_css, 1)
+          elif new_css not in text:
               raise SystemExit("Windows icon CSS not found")
-          css.write_text(text.replace(old_css, new_css, 1), encoding="utf-8")
+          css.write_text(text, encoding="utf-8")
 
           package = Path("package.json")
           data = json.loads(package.read_text(encoding="utf-8"))
@@ -113,41 +118,78 @@ jobs:
           cargo = Path("src-tauri/Cargo.toml")
           text = cargo.read_text(encoding="utf-8")
           old = f'version = "{OLD_VERSION}"'
-          if old not in text:
+          if old in text:
+              text = text.replace(old, f'version = "{VERSION}"', 1)
+          elif f'version = "{VERSION}"' not in text:
               raise SystemExit("Cargo.toml version not found")
-          cargo.write_text(text.replace(old, f'version = "{VERSION}"', 1), encoding="utf-8")
+          cargo.write_text(text, encoding="utf-8")
 
           cargo_lock = Path("src-tauri/Cargo.lock")
           text = cargo_lock.read_text(encoding="utf-8")
           old = f'name = "desktop-pet-launcher"\nversion = "{OLD_VERSION}"'
-          if old not in text:
+          new = f'name = "desktop-pet-launcher"\nversion = "{VERSION}"'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
               raise SystemExit("Cargo.lock root package version not found")
-          cargo_lock.write_text(text.replace(old, f'name = "desktop-pet-launcher"\nversion = "{VERSION}"', 1), encoding="utf-8")
+          cargo_lock.write_text(text, encoding="utf-8")
 
           tauri = Path("src-tauri/tauri.conf.json")
           data = json.loads(tauri.read_text(encoding="utf-8"))
           data["version"] = VERSION
           tauri.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
           PY
-
           git diff --check
 
-      - name: Commit release preparation
+      - name: Commit prepared release branch
         shell: bash
         run: |
           set -Eeuo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json website/index.html website/gallery/index.html website/i18n.js website/landing-download.css
-          git commit -m "release: prepare V0.2.12"
-          git push origin HEAD:main
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock src-tauri/tauri.conf.json website/index.html website/gallery/index.html website/i18n.js website/landing-download.css
+            git commit -m "release: prepare V0.2.12"
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Frontend and website checks
+        run: npm run check
+
+      - name: Install Tauri dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Check Rust formatting
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+
+      - name: Lint Rust
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+
+      - name: Test Rust
+        run: cargo test --manifest-path src-tauri/Cargo.toml
 
   quality:
-    name: Quality gate
-    needs: prepare
+    name: Release quality gate
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'release: V0.2.12')
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout prepared main
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
@@ -193,7 +235,7 @@ jobs:
     needs: quality
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout prepared main
+      - name: Checkout main
         uses: actions/checkout@v4
         with:
           ref: main
