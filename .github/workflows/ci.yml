@@ -138,8 +138,11 @@ jobs:
   create-release:
     name: Create V0.2.12 draft release
     if: >-
-      github.event_name == 'push' &&
-      contains(github.event.head_commit.message, 'release: V0.2.12')
+      (github.event_name == 'push' &&
+       contains(github.event.head_commit.message, 'release: V0.2.12')) ||
+      (github.event_name == 'pull_request' &&
+       github.head_ref == 'release/publish-v0.2.12' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     needs:
       - frontend
       - rust
