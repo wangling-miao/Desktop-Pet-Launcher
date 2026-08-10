@@ -1,3 +1,8 @@
+const i18nReady = import("./i18n.js").catch((error) => {
+  console.error("Failed to initialize website i18n", error);
+  return null;
+});
+
 const pet = document.querySelector(".pet-window img");
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -37,17 +42,30 @@ const starCount = document.querySelector("[data-stars]");
 const latestReleaseBadge = document.querySelector("[data-latest-release]");
 const releaseAssetLinks = document.querySelectorAll("[data-release-asset]");
 const releasePageLinks = document.querySelectorAll("[data-release-page]");
+let repositoryStarCount = null;
+
+function renderStarCount() {
+  if (!starCount || typeof repositoryStarCount !== "number") {
+    return;
+  }
+  const locale = window.DPLI18N?.locale?.() || "zh-CN";
+  starCount.textContent = `★ ${new Intl.NumberFormat(locale).format(repositoryStarCount)}`;
+}
 
 if (starCount) {
   fetch(launcherRepoApi)
     .then((response) => (response.ok ? response.json() : null))
     .then((repo) => {
       if (typeof repo?.stargazers_count === "number") {
-        starCount.textContent = `★ ${new Intl.NumberFormat("zh-CN").format(repo.stargazers_count)}`;
+        repositoryStarCount = repo.stargazers_count;
+        renderStarCount();
       }
     })
     .catch(() => {});
 }
+
+i18nReady.then(() => renderStarCount());
+document.addEventListener("dpl:languagechange", renderStarCount);
 
 if (latestReleaseBadge || releaseAssetLinks.length > 0 || releasePageLinks.length > 0) {
   fetch(`${launcherRepoApi}/releases/latest`, { cache: "no-store" })
