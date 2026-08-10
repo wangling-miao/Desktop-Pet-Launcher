@@ -181,11 +181,6 @@
   add("高清素材优先", "高清素材优先", "HiDPI assets preferred");
   add("Browse the collection", "浏览收藏", "Browse the collection");
   add("桌宠收藏库", "桌宠收藏库", "Pet collection");
-  add(
-    "图鉴数据来自 awesome-desktop-pets。投稿合并后会自动生成索引，无需手动维护页面。",
-    "图鉴数据来自 awesome-desktop-pets。投稿合并后会自动生成索引，无需手动维护页面。",
-    "Gallery data comes from awesome-desktop-pets. Once a contribution is merged, the index is generated automatically without manual page maintenance.",
-  );
   add("搜索桌宠", "搜索桌宠", "Search pets");
   add("全部", "全部", "All");
   add("排序", "排序", "Sort");

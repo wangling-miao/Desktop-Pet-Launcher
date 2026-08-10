@@ -127,16 +127,8 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-.os-icon--windows {
-  grid-template-columns: repeat(2, 10px);
-  grid-template-rows: repeat(2, 10px);
-  gap: 2px;
-}
-
-.os-icon--windows i {
-  width: 10px;
-  height: 10px;
-  background: currentColor;
+.os-icon--windows svg {
+  fill: currentColor;
 }
 
 .os-icon svg {
