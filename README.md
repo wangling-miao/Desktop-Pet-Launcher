@@ -1,5 +1,7 @@
 # Desktop Pet Launcher
 
+[![CI](https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml)
+
 A high-resolution desktop pet launcher built with **Tauri 2 + React + TypeScript + Vite + npm**. It is compatible with legacy `hatch-pet` pet packages and also supports the new 2x/4x high-resolution spritesheets, automatically preferring sharper runtime assets when the desktop pet is scaled up.
 
 Application identifier: `top.nether.pet`
