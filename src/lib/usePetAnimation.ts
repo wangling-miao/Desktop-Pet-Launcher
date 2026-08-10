@@ -29,7 +29,10 @@ export function usePetAnimation(
       timerRef.current = window.setTimeout(tick, Math.max(40, duration / speed));
     };
 
-    timerRef.current = window.setTimeout(tick, definition.durations[0] ?? 140);
+    timerRef.current = window.setTimeout(
+      tick,
+      Math.max(40, (definition.durations[0] ?? 140) / speed),
+    );
 
     return () => {
       if (timerRef.current !== null) {

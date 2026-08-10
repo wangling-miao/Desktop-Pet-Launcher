@@ -1,0 +1,21 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-pet-window",
+  "description": "Capabilities required by the transparent desktop pet window.",
+  "windows": ["pet"],
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "core:window:default",
+    "core:window:allow-inner-position",
+    "core:window:allow-inner-size",
+    "core:window:allow-outer-position",
+    "core:window:allow-outer-size",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-ignore-cursor-events",
+    "core:window:allow-set-position",
+    "core:window:allow-set-size",
+    "autostart:default",
+    "store:default"
+  ]
+}

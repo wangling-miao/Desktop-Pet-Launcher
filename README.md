@@ -299,3 +299,10 @@ You can also select the `my-pet/` directory directly.
 ### The installer icon does not match the app icon
 
 The NSIS installer and uninstaller are configured to use `src-tauri/icons/icon.ico`. Windows Explorer caches icons, so after replacing the installer you may need to refresh Explorer or rename the file to see the latest icon.
+
+## License
+
+The Desktop Pet Launcher source code is licensed under the **Apache License 2.0**.
+
+Desktop pet artwork, character names, gallery packages, and other third-party assets may use separate licenses or require separate rights review. The Apache-2.0 license for this repository's source code does not automatically grant rights to those assets. Check each pet package's license metadata before redistributing it.
+
