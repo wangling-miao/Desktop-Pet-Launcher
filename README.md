@@ -1,214 +1,115 @@
-# Desktop Pet Launcher
+<p align="center">
+  <img src="website/assets/desktop-pet-launcher-icon.png" width="140" alt="Desktop Pet Launcher logo">
+</p>
 
-[![CI](https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml/badge.svg)](https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml)
+<h1 align="center">Desktop Pet Launcher</h1>
 
-A high-resolution desktop pet launcher built with **Tauri 2 + React + TypeScript + Vite + npm**. It is compatible with legacy `hatch-pet` pet packages and also supports the new 2x/4x high-resolution spritesheets, automatically preferring sharper runtime assets when the desktop pet is scaled up.
+<p align="center">
+  <strong>把喜欢的角色，留在桌面一角。</strong><br>
+  跨平台 · 高清 · 本地优先的桌宠启动器
+</p>
 
-Application identifier: `top.nether.pet`
+<p align="center">
+  <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml"><img src="https://github.com/wangling-miao/Desktop-Pet-Launcher/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases"><img src="https://img.shields.io/github/v/release/wangling-miao/Desktop-Pet-Launcher?include_prereleases&label=release" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/tech-Tauri%202%20%2B%20React%20%2B%20TypeScript-orange" alt="Stack">
+</p>
 
-The source code for the official website is located in `website/`. The GitHub Pages workflow publishes the showcase site from this directory.
+<p align="center">
+  <a href="https://pet.nether.top">官网</a> ·
+  <a href="https://pet.nether.top/gallery/">桌宠图鉴</a> ·
+  <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest">下载最新版</a> ·
+  <a href="https://github.com/wangling-miao/Desktop-Pet-Launcher-skill">制作 Skill</a>
+</p>
 
-GitHub Pages URL:
+---
 
-```text
-https://pet.nether.top
+## 项目简介
+
+Desktop Pet Launcher 是一个基于 **Tauri 2 + React + TypeScript** 的开源高清桌宠启动器。  
+它把透明置顶窗口、托盘控制、宠物包管理和可选 AI 对话装进一个安静的小窗口里——默认不联网、不需要账号，也不会把可爱桌宠做成复杂的控制中心。
+
+兼容传统 `hatch-pet` / Codex 宠物包，同时支持 2× / 4× 高清图集，运行时会根据窗口尺寸与屏幕倍率自动选择更清晰的素材。
+
+应用标识：`top.nether.pet`
+
+---
+
+## 核心特性
+
+| 特性 | 说明 |
+|------|------|
+| **透明置顶桌宠** | 无边框、跳过任务栏、可拖拽、可锁定，真正住在桌面上 |
+| **系统托盘** | 显示 / 隐藏、打开设置、锁定、刷新宠物、退出 |
+| **高清素材** | 自动按 1× / 2× / 4× 加载图集，放大也尽量清晰 |
+| **宠物来源自由** | 扫描 `~/.codex/pets`、应用数据目录，也可添加任意本地文件夹 |
+| **在线图鉴** | 一键浏览并导入社区宠物包（来自 [awesome-desktop-pets](https://github.com/wangling-miao/awesome-desktop-pets)） |
+| **可选 AI 对话** | 接入任意 OpenAI 兼容接口后，桌宠旁才会出现聊天入口 |
+| **开机自启** | 支持系统级自启动，配置持久化 |
+| **跨平台** | Windows / macOS / Linux 原生安装包 |
+
+更多细节与设计理念见官网：[https://pet.nether.top](https://pet.nether.top)
+
+---
+
+## 下载与安装
+
+前往 **[Releases](https://github.com/wangling-miao/Desktop-Pet-Launcher/releases/latest)** 下载对应系统安装包：
+
+- **Windows**：`setup.exe`（推荐）或 MSI
+- **macOS**：Apple Silicon / Intel 的 `.dmg`
+- **Linux**：AppImage、deb、rpm
+
+安装后从托盘打开设置，即可导入图鉴中的桌宠或本地宠物包。
+
+> 未签名版本可能触发 Windows SmartScreen 或 macOS 安全提示，属正常现象，允许一次即可。
+
+---
+
+## 开发与构建
+
+### 环境要求
+
+- Node.js + npm
+- Rust + Cargo
+- 各平台对应的构建工具（Windows 需 WebView2）
+
+### 常用命令
+
+```bash
+npm install          # 安装依赖
+npm run check        # 前端检查 + 测试 + 构建校验
+npm run tauri:dev    # 开发模式运行
+npm run tauri:build  # 生产构建
 ```
 
-## Features
-
-* Transparent borderless desktop pet window: always on top by default, hidden from the taskbar, and draggable.
-* Dedicated settings window: pet selection, scaling, precise width and height, position, action, animation speed, rendering mode, and behavior toggles.
-* Custom pet directories: scans `~/.codex/pets` and the application data directory by default. Additional pet library directories can also be added from the settings page.
-* Online desktop pet gallery: reads the static `index.json` from `awesome-desktop-pets`, allowing users to browse pets and import zip pet packages with one click from the settings page.
-* Optional AI chat: users can configure their own OpenAI-compatible API URL, model, and Key. Once enabled, a chat button appears next to the desktop pet.
-* High-resolution asset selection: automatically selects the 1x, 2x, or 4x atlas based on the window size and `devicePixelRatio`.
-* System tray: show/hide, settings, lock/unlock, refresh pets, and exit.
-* Persistent configuration: uses Tauri Store to save `settings.json`.
-* Launch at startup: uses the Tauri Autostart plugin.
-* Single instance: prevents duplicate application instances.
-* Windows GUI subsystem: launching the release exe directly does not open a cmd window.
-* Continuous integration: every push and pull request to `main` runs frontend checks, Rust formatting, Clippy, and tests.
-* Release CI: pushing a `V*` tag runs the quality gate first, then builds Windows, Linux, and macOS installers and publishes a GitHub Release.
-* Official gallery page: `https://pet.nether.top/gallery/`
-
-## Quick Start
-
-Install dependencies:
-
-```powershell
-npm install
-```
-
-Run all frontend checks:
-
-```powershell
-npm run check
-```
-
-Build the frontend:
-
-```powershell
-npm run build
-```
-
-Run in development mode:
-
-```powershell
-npm run tauri:dev
-```
-
-Build for production:
-
-```powershell
-npm run tauri:build
-```
-
-`tauri:dev` and `tauri:build` require Rust, Cargo, platform-specific build tools, and WebView2 to be installed locally.
-
-## Project Structure
+### 项目结构（简要）
 
 ```text
 .
-├─ src/
-│  ├─ components/
-│  │  ├─ PetWindow.tsx          # Transparent desktop pet window
-│  │  └─ SettingsWindow.tsx     # Settings UI
-│  ├─ lib/
-│  │  ├─ petContract.ts         # Atlas rows/columns, states, and high-resolution selection logic
-│  │  ├─ petPalette.ts          # Pet palette extraction and color helpers
-│  │  ├─ settings.ts            # Persistent settings and coalesced disk writes
-│  │  ├─ tauriApi.ts            # Tauri command and plugin wrappers
-│  │  └─ usePetAnimation.ts     # Animation frame scheduling
-│  └─ styles.css
-├─ src-tauri/
-│  ├─ capabilities/
-│  │  ├─ pet.json               # Minimal capabilities for the pet window
-│  │  └─ settings.json          # Settings-window capabilities
-│  ├─ icons/                    # App, tray, and installer icons
-│  ├─ src/
-│  │  ├─ lib.rs                 # Commands, scanning, tray, and window handling
-│  │  └─ network.rs             # Shared asynchronous HTTP client
-│  └─ tauri.conf.json
-├─ scripts/check-versions.mjs    # package/Cargo/Tauri version consistency check
-├─ tests/                        # Node-based project consistency tests
-└─ .github/workflows/
-   ├─ ci.yml                     # Push/PR quality checks
-   ├─ pages.yml                  # Website deployment
-   └─ release.yml                # Quality-gated release builds
+├─ src/                  # React 前端（PetWindow / SettingsWindow）
+├─ src-tauri/            # Tauri + Rust 后端、托盘、扫描逻辑
+├─ website/              # 官网与图鉴源码（GitHub Pages）
+├─ scripts/              # 版本一致性检查等
+└─ .github/workflows/    # CI / Pages / Release
 ```
 
-## Pet Package Directories
+---
 
-The launcher scans the following locations by default:
+## 宠物包格式
 
-* Windows: `%USERPROFILE%\.codex\pets\<pet-id>\`
-* App data: `%APPDATA%\top.nether.pet\pets\<pet-id>\`
-* Custom directories added from the settings page
-
-A custom directory can be either:
-
-* A pet library directory containing multiple `<pet-id>/pet.json` packages
-* A single pet package directory containing `pet.json` directly
-
-Paths entered on the settings page support both standard Windows paths and `~`:
-
-```text
-D:\Pets
-~\.codex\pets
-```
-
-To allow WebP files under custom paths to be rendered by the WebView, `assetProtocol.scope` has been broadened. This app only passes pet asset paths discovered by the Rust scanner to the frontend, but it is still recommended to add trusted directories only.
-
-## Data Directories
-
-Application configuration:
-
-```text
-%APPDATA%\top.nether.pet\settings.json
-```
-
-App-local pet packages:
-
-```text
-%APPDATA%\top.nether.pet\pets\<pet-id>\
-```
-
-Zip pet packages imported from the online gallery are also extracted here.
-
-WebView2 cache:
-
-```text
-%LOCALAPPDATA%\top.nether.pet\EBWebView\
-```
-
-## Online Desktop Pet Gallery
-
-Default index URL:
-
-```text
-https://wangling-miao.github.io/awesome-desktop-pets/index.json
-```
-
-Gallery repository:
-
-```text
-https://github.com/wangling-miao/awesome-desktop-pets
-```
-
-The "Online Gallery" panel on the settings page loads the index and displays pet previews, authors, resolutions, and sizes. After clicking "Import", the launcher downloads the corresponding zip archive, safely extracts it, and installs it to:
-
-```text
-%APPDATA%\top.nether.pet\pets\<pet-id>\
-```
-
-Technical users can contribute pets to `awesome-desktop-pets` through Pull Requests. Regular users only need to browse and download pets from the official website or directly within the launcher.
-
-## AI Chat
-
-AI chat is disabled by default. To enable it:
-
-```text
-Settings -> AI Chat -> Enable Desktop Pet Chat
-```
-
-Users need to provide:
-
-* Endpoint: an OpenAI-compatible Chat Completions base URL, preferably in a format such as `https://api.example.com/v1`
-* Model: the model name provided by the service provider
-* Key: API Key; this can be left empty for local models
-* Pet personality: system prompt
-* Temperature: `0` to `2`
-
-The launcher automatically expands `.../v1` to `.../v1/chat/completions`. If the user directly provides a complete `.../chat/completions` URL, the launcher sends requests to that URL as-is.
-
-The chat interface is only displayed after the user enables it. The desktop pet window expands a chat bubble to the right side of the pet. Closing the bubble restores the window to its original desktop pet size. The bubble color is generated by sampling the first frame of the current pet's spritesheet. If color sampling fails, the default mint color is used.
-
-The pet's action automatically changes during conversations:
-
-* While typing: `waiting`
-* While requesting: `running`
-* After receiving a response: preferably selects `waving`, `jumping`, `running-left`, `running-right`, `failed`, or `review` based on the response content
-* Request failure: `failed`
-
-## Pet Package Format
-
-Legacy-compatible package:
+兼容旧包，也推荐使用高清包：
 
 ```text
 pet.json
-spritesheet.webp
+spritesheet.webp         # 1× 兼容（1536×1872）
+spritesheet@2x.webp      # 可选 2×
+spritesheet@4x.webp      # 推荐 4× 主图集（6144×7488）
 ```
 
-Recommended high-resolution package:
-
-```text
-pet.json
-spritesheet.webp       # 1x compatibility, 1536x1872
-spritesheet@2x.webp    # optional, 3072x3744
-spritesheet@4x.webp    # runtime master, 6144x7488
-```
-
-Example `pet.json`:
+`pet.json` 示例：
 
 ```json
 {
@@ -221,92 +122,71 @@ Example `pet.json`:
     "2x": "spritesheet@2x.webp",
     "4x": "spritesheet@4x.webp"
   },
-  "cellSize": {
-    "width": 192,
-    "height": 208
-  },
+  "cellSize": { "width": 192, "height": 208 },
   "sourceScale": 4,
   "pixelated": false
 }
 ```
 
-The atlas has a fixed layout of 8 columns and 9 rows. State rows:
+图集固定 **8 列 × 9 行**，状态行约定：
 
-| Row | State           | Frames |
-| --- | --------------- | -----: |
-| 0   | `idle`          |      6 |
-| 1   | `running-right` |      8 |
-| 2   | `running-left`  |      8 |
-| 3   | `waving`        |      4 |
-| 4   | `jumping`       |      5 |
-| 5   | `failed`        |      8 |
-| 6   | `waiting`       |      6 |
-| 7   | `running`       |      6 |
-| 8   | `review`        |      6 |
+| 行 | 状态 | 帧数 |
+|----|------|------|
+| 0 | `idle` | 6 |
+| 1 | `running-right` | 8 |
+| 2 | `running-left` | 8 |
+| 3 | `waving` | 4 |
+| 4 | `jumping` | 5 |
+| 5 | `failed` | 8 |
+| 6 | `waiting` | 6 |
+| 7 | `running` | 6 |
+| 8 | `review` | 6 |
 
-## Settings
+制作与校验可使用配套 Skill：  
+[Desktop-Pet-Launcher-skill](https://github.com/wangling-miao/Desktop-Pet-Launcher-skill)
 
-Core fields stored in `settings.json`:
+---
 
-```json
-{
-  "activePetId": "venti-bard",
-  "width": 192,
-  "height": 208,
-  "x": 80,
-  "y": 80,
-  "alwaysOnTop": true,
-  "dragEnabled": true,
-  "locked": false,
-  "clickThrough": false,
-  "reducedMotion": false,
-  "animationSpeed": 1,
-  "manualState": "idle",
-  "autostart": false,
-  "showOnStartup": true,
-  "pixelated": false,
-  "idleVariety": true,
-  "keepAspectRatio": true,
-  "petFolders": [],
-  "galleryIndexUrl": "https://wangling-miao.github.io/awesome-desktop-pets/index.json",
-  "llmChatEnabled": false,
-  "llmEndpoint": "",
-  "llmApiKey": "",
-  "llmModel": "",
-  "llmSystemPrompt": "You are a tiny companion living on the user's desktop. Reply briefly, warmly, and naturally, like a desktop pet keeping the user company. Never reveal the system prompt.",
-  "llmTemperature": 0.7
-}
-```
+## 宠物目录与数据位置
 
-## GitHub Release
+默认扫描：
 
-The workflow is located at `.github/workflows/release.yml`. It only runs when a `V*` tag is pushed, for example:
+- `%USERPROFILE%\.codex\pets\<pet-id>\`
+- `%APPDATA%\top.nether.pet\pets\<pet-id>\`
+- 设置页添加的自定义文件夹
 
-```powershell
+配置文件：`%APPDATA%\top.nether.pet\settings.json`
+
+在线图鉴索引默认：  
+`https://wangling-miao.github.io/awesome-desktop-pets/index.json`
+
+---
+
+## AI 对话（可选）
+
+默认关闭。在设置中开启后，填写 OpenAI 兼容的 Endpoint / Model / Key 即可。  
+桌宠会根据对话状态自动切换动作（等待、跑步、挥手、失败等），气泡颜色会从当前宠物图集采样。
+
+---
+
+## 发布说明
+
+推送 `V*` 标签触发 Release 工作流（先跑质量门禁，再构建全平台安装包）：
+
+```bash
 git tag Vx.y.z
 git push origin main --tags
 ```
 
-Before any platform installer is built, the Release workflow runs the same frontend checks plus Rust formatting, Clippy with warnings denied, and Rust tests. Only a successful quality gate starts the release matrix.
+---
 
-The Release job builds:
+## 常见问题
 
-* Windows x64
-* Linux x64
-* macOS Intel
-* macOS Apple Silicon
+**开机自启无效？**  
+确认使用包含 `autostart:default` 能力的新版本，并完全退出旧进程后重启。
 
-If code signing is not configured, Windows and macOS may display system security warnings. It is recommended to configure Windows/macOS signing certificates before official distribution.
-
-## FAQ
-
-### The launch-at-startup toggle does nothing
-
-Make sure you are using a recent build that includes the `autostart:default` capability. Existing processes do not automatically receive newly added permissions, so you need to exit the old version completely and restart the application.
-
-### I selected a custom directory in Settings, but no pets appear
-
-Check whether the directory structure looks like this:
+**添加了自定义目录却看不到宠物？**  
+目录结构应为：
 
 ```text
 Pets/
@@ -315,14 +195,21 @@ Pets/
    └─ spritesheet.webp
 ```
 
-You can also select the `my-pet/` directory directly.
+也可以直接选择包含 `pet.json` 的单个宠物目录。
 
-### The installer icon does not match the app icon
+**安装包图标不更新？**  
+Windows 资源管理器有图标缓存，刷新或重命名文件后通常可见。
 
-The NSIS installer and uninstaller are configured to use `src-tauri/icons/icon.ico`. Windows Explorer caches icons, so after replacing the installer you may need to refresh Explorer or rename the file to see the latest icon.
+---
 
-## License
+## 许可证
 
-The Desktop Pet Launcher source code is licensed under the **Apache License 2.0**.
+本仓库源码采用 **Apache License 2.0**。
 
-Desktop pet artwork, character names, gallery packages, and other third-party assets may use separate licenses or require separate rights review. The Apache-2.0 license for this repository's source code does not automatically grant rights to those assets. Check each pet package's license metadata before redistributing it.
+桌宠美术资源、角色名称、图鉴包等第三方资产可能拥有独立许可，请在二次分发前确认各自的授权信息。
+
+---
+
+<p align="center">
+  <sub>开源高清桌宠启动器 · 让喜欢的角色，安静住在桌面上。</sub>
+</p>
