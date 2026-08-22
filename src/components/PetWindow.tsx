@@ -39,6 +39,11 @@ import {
 } from "../lib/tauriApi";
 import { usePetAnimation } from "../lib/usePetAnimation";
 import { DEFAULT_PALETTE, extractPetPalette, type PetPalette } from "../lib/petPalette";
+import {
+  applyPetDragMovement,
+  createPetDragState,
+  type PetDragState,
+} from "../lib/petDrag";
 
 type ChatPhase = "idle" | "editing" | "thinking" | "answer" | "error";
 type ChatSide = "left" | "right";
@@ -80,17 +85,7 @@ export function PetWindow() {
   const chatHotspotActiveRef = useRef(false);
   const positionSaveTimerRef = useRef<number | null>(null);
   const positionSaveEnabledAtRef = useRef(0);
-  const dragRef = useRef<{
-    pointerId: number;
-    startScreenX: number;
-    startScreenY: number;
-    originX: number;
-    originY: number;
-    windowOffsetX: number;
-    windowOffsetY: number;
-    moved: boolean;
-    lastDirection: "running-left" | "running-right" | null;
-  } | null>(null);
+  const dragRef = useRef<PetDragState | null>(null);
 
   const refreshPackages = useCallback(async (petFolders: string[] = []) => {
     const found = await listPetPackages(petFolders);
@@ -654,17 +649,13 @@ export function PetWindow() {
     const position = await captureCurrentWindowPosition();
     const windowOffsetX = currentChatWindowOffsetX();
     const windowOffsetY = chatOpen ? windowOffsetRef.current.y : 0;
-    dragRef.current = {
+    dragRef.current = createPetDragState({
       pointerId: event.pointerId,
-      startScreenX: event.screenX,
-      startScreenY: event.screenY,
       originX: (position?.x ?? settings.x ?? 80) + windowOffsetX,
       originY: (position?.y ?? settings.y ?? 80) + windowOffsetY,
       windowOffsetX,
       windowOffsetY,
-      moved: false,
-      lastDirection: null,
-    };
+    });
   }
 
   async function handlePointerMove(event: PointerEvent<HTMLElement>) {
@@ -672,23 +663,18 @@ export function PetWindow() {
     if (!drag || drag.pointerId !== event.pointerId) {
       return;
     }
-    const dx = event.screenX - drag.startScreenX;
-    const dy = event.screenY - drag.startScreenY;
-    if (Math.abs(dx) + Math.abs(dy) < 4) {
+    const result = applyPetDragMovement(drag, event.movementX, event.movementY);
+    if (!result) {
       return;
     }
-    drag.moved = true;
-    const direction = dx < 0 ? "running-left" : "running-right";
-    if (direction !== drag.lastDirection) {
-      drag.lastDirection = direction;
-      setDragState(direction);
+    if (result.direction !== drag.lastDirection) {
+      setDragState(result.direction);
     }
-    const petAnchor = {
-      x: drag.originX + dx,
-      y: drag.originY + dy,
-    };
-    petAnchorRef.current = petAnchor;
-    await moveCurrentWindowTo(petAnchor.x - drag.windowOffsetX, petAnchor.y - drag.windowOffsetY);
+    petAnchorRef.current = result.petAnchor;
+    await moveCurrentWindowTo(
+      result.petAnchor.x - drag.windowOffsetX,
+      result.petAnchor.y - drag.windowOffsetY,
+    );
   }
 
   async function handlePointerUp(event: PointerEvent<HTMLElement>) {

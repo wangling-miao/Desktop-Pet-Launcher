@@ -37,7 +37,8 @@ struct PetManifest {
     display_name: Option<String>,
     #[serde(default)]
     name: Option<String>,
-    description: String,
+    #[serde(default)]
+    description: Option<String>,
     #[serde(rename = "spritesheetPath")]
     spritesheet_path: String,
     #[serde(default)]
@@ -314,6 +315,10 @@ fn reveal_pet_folder(path_or_id: String, app: AppHandle) -> Result<(), String> {
         .map_err(|error| error.to_string())
 }
 
+const MAX_PET_ZIP_BYTES: u64 = 80 * 1024 * 1024;
+const MAX_PET_EXTRACTED_BYTES: u64 = 200 * 1024 * 1024;
+const MAX_PET_ZIP_ENTRIES: usize = 512;
+
 #[tauri::command]
 async fn import_pet_from_url(
     url: String,
@@ -334,7 +339,22 @@ async fn import_pet_from_url(
     if !response.status().is_success() {
         return Err(format!("Download failed with status {}", response.status()));
     }
+    if response
+        .content_length()
+        .is_some_and(|length| length > MAX_PET_ZIP_BYTES)
+    {
+        return Err(format!(
+            "Pet package is too large (limit: {} bytes)",
+            MAX_PET_ZIP_BYTES
+        ));
+    }
     let bytes = response.bytes().await.map_err(|error| error.to_string())?;
+    if bytes.len() as u64 > MAX_PET_ZIP_BYTES {
+        return Err(format!(
+            "Pet package is too large (limit: {} bytes)",
+            MAX_PET_ZIP_BYTES
+        ));
+    }
 
     let app_data = app
         .path()
@@ -999,7 +1019,7 @@ fn read_pet_package(root: &Path) -> Result<PetPackage, String> {
     let package = PetPackage {
         id: manifest.id,
         display_name,
-        description: manifest.description,
+        description: manifest.description.unwrap_or_default(),
         root_dir: root.to_string_lossy().to_string(),
         manifest_path: manifest_path.to_string_lossy().to_string(),
         spritesheet_path: one_x_path.to_string_lossy().to_string(),
@@ -1025,6 +1045,13 @@ fn read_pet_package(root: &Path) -> Result<PetPackage, String> {
 fn extract_pet_zip(bytes: &[u8], destination: &Path) -> Result<PathBuf, String> {
     let mut archive =
         zip::ZipArchive::new(Cursor::new(bytes)).map_err(|error| error.to_string())?;
+    if archive.len() > MAX_PET_ZIP_ENTRIES {
+        return Err(format!(
+            "Pet package has too many entries (limit: {})",
+            MAX_PET_ZIP_ENTRIES
+        ));
+    }
+    let mut extracted_bytes = 0_u64;
 
     for index in 0..archive.len() {
         let mut file = archive.by_index(index).map_err(|error| error.to_string())?;
@@ -1041,8 +1068,22 @@ fn extract_pet_zip(bytes: &[u8], destination: &Path) -> Result<PathBuf, String> 
         if let Some(parent) = out_path.parent() {
             fs::create_dir_all(parent).map_err(|error| error.to_string())?;
         }
+        let file_size = file.size();
+        if extracted_bytes.saturating_add(file_size) > MAX_PET_EXTRACTED_BYTES {
+            return Err(format!(
+                "Pet package exceeds extracted size limit ({} bytes)",
+                MAX_PET_EXTRACTED_BYTES
+            ));
+        }
         let mut out_file = fs::File::create(&out_path).map_err(|error| error.to_string())?;
-        io::copy(&mut file, &mut out_file).map_err(|error| error.to_string())?;
+        let written = io::copy(&mut file, &mut out_file).map_err(|error| error.to_string())?;
+        extracted_bytes = extracted_bytes.saturating_add(written);
+        if extracted_bytes > MAX_PET_EXTRACTED_BYTES {
+            return Err(format!(
+                "Pet package exceeds extracted size limit ({} bytes)",
+                MAX_PET_EXTRACTED_BYTES
+            ));
+        }
     }
 
     find_extracted_pet_dir(destination)
