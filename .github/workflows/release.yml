@@ -110,6 +110,10 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Use fixed Tauri CLI for AppImage
+        if: matrix.platform == 'ubuntu-22.04'
+        run: npm install --no-save @tauri-apps/cli@2.11.4
+
       - name: Build and publish Tauri bundles
         uses: tauri-apps/tauri-action@v0
         env:
