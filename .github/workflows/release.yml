@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - "V*"
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -121,10 +119,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: V0.2.14
-          releaseName: Desktop Pet Launcher V0.2.14
+          tagName: ${{ github.ref_name }}
+          releaseName: Desktop Pet Launcher ${{ github.ref_name }}
           releaseBody: |
-            Desktop Pet Launcher automated build for V0.2.14.
+            Desktop Pet Launcher automated build for ${{ github.ref_name }}.
 
             Download the installer for your operating system from the assets below.
           releaseDraft: false
