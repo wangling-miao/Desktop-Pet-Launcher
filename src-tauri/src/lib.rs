@@ -958,7 +958,7 @@ fn round_to_i32(value: f64) -> i32 {
 fn path_identity_key(path: &Path) -> String {
     #[cfg(windows)]
     {
-        return path.to_string_lossy().to_lowercase();
+        path.to_string_lossy().to_lowercase()
     }
 
     #[cfg(not(windows))]
